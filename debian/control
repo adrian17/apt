@@ -3,9 +3,9 @@ Section: admin
 Priority: important
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 XSBC-Original-Maintainer: APT Development Team <deity@lists.debian.org>
-Uploaders:  Michael Vogt <mvo@debian.org>, Christian Perrier <bubulle@debian.org>, 
+Uploaders: Michael Vogt <mvo@debian.org>,
  Julian Andres Klode <jak@debian.org>
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 Build-Depends: dpkg-dev (>= 1.15.8), debhelper (>= 8.1.3~), libdb-dev,
  gettext (>= 0.12), libcurl4-gnutls-dev (>= 7.19.4~),
  zlib1g-dev, libbz2-dev, liblzma-dev,
@@ -15,15 +15,14 @@ Build-Depends: dpkg-dev (>= 1.15.8), debhelper (>= 8.1.3~), libdb-dev,
 Build-Depends-Indep: doxygen, w3m, graphviz
 Build-Conflicts: autoconf2.13, automake1.4
 Vcs-Git: git://anonscm.debian.org/apt/apt.git
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=apt/apt.git
-XS-Testsuite: autopkgtest
+Vcs-Browser: https://anonscm.debian.org/cgit/apt/apt.git
+Testsuite: autopkgtest
 
 Package: apt
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${apt:keyring}, gnupg
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${apt:keyring}, gpgv | gpgv2, gnupg | gnupg2, adduser
 Replaces: manpages-pl (<< 20060617-3~), manpages-it (<< 2.80-4~), sun-java6-jdk (>> 0), sun-java5-jdk (>> 0), openjdk-6-jdk (<< 6b24-1.11-0ubuntu1~)
 Breaks: manpages-pl (<< 20060617-3~), manpages-it (<< 2.80-4~), sun-java6-jdk (>> 0), sun-java5-jdk (>> 0), openjdk-6-jdk (<< 6b24-1.11-0ubuntu1~)
-Conflicts: python-apt (<< 0.7.93.2~)
 Suggests: aptitude | synaptic | wajig, dpkg-dev (>= 1.17.2), apt-doc, python-apt
 Description: commandline package manager
  This package provides commandline tools for searching and
@@ -40,12 +39,13 @@ Description: commandline package manager
   * apt-config as an interface to the configuration settings
   * apt-key as an interface to manage authentication keys
 
-Package: libapt-pkg4.16
+Package: libapt-pkg5.0
 Architecture: any
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Breaks: apt (<< 1.0.10.2ubuntu1), libapt-inst1.7 (<< 1.0.10.2ubuntu1), apt-move (<< 4.2.27-3build2), apt-transport-tor (<< 0.2.1-1build2), aptitude (<< 0.7-1ubuntu1.1), aptsh (<< 0.0.7+nmu2ubuntu4.1), debian-xcontrol (<< 0.0.4-1.1build5), libapt-pkg-perl (<< 0.1.29build4), libept1.4.16 (<< 1.0.13ubuntu1.1), libopenscap8 (<< 1.2.3-1build2), libqapt3 (<< 3.0.1-0ubuntu1.1), libqapt3-runtime (<< 3.0.1-0ubuntu1.1), packagekit-backend-aptcc (<< 0.8.17-4ubuntu6~gcc5.3), packagesearch (<< 2.7.4ubuntu1.1), postgresql-9.4-debversion (<< 1.0.7-4build2), python-apt (<< 1.0.1build1), python3-apt (<< 1.0.1build1), qapt-deb-installer (<< 3.0.1-0ubuntu1.1), ruby-debian (<< 0.3.9build3), synaptic (<< 0.81.4build2), ubuntu-system-settings (<< 0.3+15.10.20150924-0ubuntu1.1)
+Breaks: apt (<< 1.1~exp14), libapt-inst1.5 (<< 0.9.9~)
+Recommends: apt (>= ${binary:Version})
 Section: libs
 Description: package management runtime library
  This library provides the common functionality for searching and
@@ -63,7 +63,7 @@ Description: package management runtime library
     http, rsh as well as an interface to add more transports like
     https (apt-transport-https) and debtorrent (apt-transport-debtorrent).
 
-Package: libapt-inst1.7
+Package: libapt-inst2.0
 Architecture: any
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
@@ -117,12 +117,13 @@ Description: package management related utility programs
   * apt-extracttemplates is used by debconf to prompt for configuration
     questions before installation.
   * apt-ftparchive is used to create Packages and other index files
-    needed to publish an archive of debian packages
+    needed to publish an archive of Debian packages
   * apt-sortpkgs is a Packages/Sources file normalizer.
 
 Package: apt-transport-https
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: ca-certificates
 Priority: optional
 Description: https download transport for APT
  This package enables the usage of 'deb https://foo distro main' lines

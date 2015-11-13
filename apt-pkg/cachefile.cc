@@ -35,10 +35,13 @@
 #include <apti18n.h>
 									/*}}}*/
 // CacheFile::CacheFile - Constructor					/*{{{*/
-// ---------------------------------------------------------------------
-/* */
-pkgCacheFile::pkgCacheFile() : d(NULL), Map(NULL), Cache(NULL), DCache(NULL),
-				SrcList(NULL), Policy(NULL)
+pkgCacheFile::pkgCacheFile() : d(NULL), ExternOwner(false), Map(NULL), Cache(NULL),
+				DCache(NULL), SrcList(NULL), Policy(NULL)
+{
+}
+pkgCacheFile::pkgCacheFile(pkgDepCache * const Owner) : d(NULL), ExternOwner(true),
+   Map(&Owner->GetCache().GetMap()), Cache(&Owner->GetCache()),
+   DCache(Owner), SrcList(NULL), Policy(NULL)
 {
 }
 									/*}}}*/
@@ -47,54 +50,58 @@ pkgCacheFile::pkgCacheFile() : d(NULL), Map(NULL), Cache(NULL), DCache(NULL),
 /* */
 pkgCacheFile::~pkgCacheFile()
 {
-   delete DCache;
+   if (ExternOwner == false)
+   {
+      delete DCache;
+      delete Cache;
+      delete Map;
+   }
    delete Policy;
    delete SrcList;
-   delete Cache;
-   delete Map;
-   _system->UnLock(true);
+   if (ExternOwner == false)
+      _system->UnLock(true);
 }
 									/*}}}*/
 // CacheFile::BuildCaches - Open and build the cache files		/*{{{*/
-// ---------------------------------------------------------------------
-/* */
+class APT_HIDDEN ScopedErrorMerge {
+public:
+   ScopedErrorMerge() { _error->PushToStack(); }
+   ~ScopedErrorMerge() { _error->MergeWithStack(); }
+};
 bool pkgCacheFile::BuildCaches(OpProgress *Progress, bool WithLock)
 {
    if (Cache != NULL)
       return true;
 
+   ScopedErrorMerge sem;
    if (_config->FindB("pkgCacheFile::Generate", true) == false)
    {
-      Map = new MMap(*new FileFd(_config->FindFile("Dir::Cache::pkgcache"),
-		     FileFd::ReadOnly),MMap::Public|MMap::ReadOnly);
+      FileFd file(_config->FindFile("Dir::Cache::pkgcache"), FileFd::ReadOnly);
+      if (file.IsOpen() == false || file.Failed())
+	 return false;
+      Map = new MMap(file, MMap::Public|MMap::ReadOnly);
       Cache = new pkgCache(Map);
-      if (_error->PendingError() == true)
-         return false;
-      return true;
+      return _error->PendingError() == false;
    }
 
-   const bool ErrorWasEmpty = _error->empty();
    if (WithLock == true)
       if (_system->Lock() == false)
 	 return false;
-   
-   if (_config->FindB("Debug::NoLocking",false) == true)
-      WithLock = false;
-      
+
    if (_error->PendingError() == true)
       return false;
 
    BuildSourceList(Progress);
 
    // Read the caches
-   bool Res = pkgCacheGenerator::MakeStatusCache(*SrcList,Progress,&Map,!WithLock);
+   bool Res = pkgCacheGenerator::MakeStatusCache(*SrcList,Progress,&Map, true);
    if (Progress != NULL)
       Progress->Done();
    if (Res == false)
       return _error->Error(_("The package lists or status file could not be parsed or opened."));
 
    /* This sux, remove it someday */
-   if (ErrorWasEmpty == true && _error->empty() == false)
+   if (_error->PendingError() == true)
       _error->Warning(_("You may want to run apt-get update to correct these problems"));
 
    Cache = new pkgCache(Map);
@@ -150,8 +157,7 @@ bool pkgCacheFile::BuildDepCache(OpProgress *Progress)
    if (_error->PendingError() == true)
       return false;
 
-   DCache->Init(Progress);
-   return true;
+   return DCache->Init(Progress);
 }
 									/*}}}*/
 // CacheFile::Open - Open the cache files, creating if necessary	/*{{{*/
@@ -185,9 +191,9 @@ void pkgCacheFile::RemoveCaches()
    std::string const srcpkgcache = _config->FindFile("Dir::cache::srcpkgcache");
 
    if (pkgcache.empty() == false && RealFileExists(pkgcache) == true)
-      unlink(pkgcache.c_str());
+      RemoveFile("RemoveCaches", pkgcache);
    if (srcpkgcache.empty() == false && RealFileExists(srcpkgcache) == true)
-      unlink(srcpkgcache.c_str());
+      RemoveFile("RemoveCaches", srcpkgcache);
    if (pkgcache.empty() == false)
    {
       std::string cachedir = flNotFile(pkgcache);
@@ -201,7 +207,7 @@ void pkgCacheFile::RemoveCaches()
 	    std::string nuke = flNotDir(*file);
 	    if (strncmp(cachefile.c_str(), nuke.c_str(), cachefile.length()) != 0)
 	       continue;
-	    unlink(file->c_str());
+	    RemoveFile("RemoveCaches", *file);
 	 }
       }
    }
@@ -220,7 +226,7 @@ void pkgCacheFile::RemoveCaches()
       std::string nuke = flNotDir(*file);
       if (strncmp(cachefile.c_str(), nuke.c_str(), cachefile.length()) != 0)
 	 continue;
-      unlink(file->c_str());
+      RemoveFile("RemoveCaches", *file);
    }
 }
 									/*}}}*/
@@ -229,11 +235,16 @@ void pkgCacheFile::RemoveCaches()
 /* */
 void pkgCacheFile::Close()
 {
-   delete DCache;
+   if (ExternOwner == false)
+   {
+      delete DCache;
+      delete Cache;
+      delete Map;
+   }
+   else
+      ExternOwner = false;
    delete Policy;
-   delete Cache;
    delete SrcList;
-   delete Map;
    _system->UnLock(true);
 
    Map = NULL;

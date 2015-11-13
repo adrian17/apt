@@ -130,28 +130,17 @@ class FileFd
    inline bool Eof() {return (Flags & HitEof) == HitEof;};
    inline bool IsCompressed() {return (Flags & Compressed) == Compressed;};
    inline std::string &Name() {return FileName;};
-   
-   FileFd(std::string FileName,unsigned int const Mode,unsigned long AccessMode = 0666) : iFd(-1), Flags(0), d(NULL)
-   {
-      Open(FileName,Mode, None, AccessMode);
-   };
-   FileFd(std::string FileName,unsigned int const Mode, CompressMode Compress, unsigned long AccessMode = 0666) : iFd(-1), Flags(0), d(NULL)
-   {
-      Open(FileName,Mode, Compress, AccessMode);
-   };
-   FileFd() : iFd(-1), Flags(AutoClose), d(NULL) {};
-   FileFd(int const Fd, unsigned int const Mode = ReadWrite, CompressMode Compress = None) : iFd(-1), Flags(0), d(NULL)
-   {
-      OpenDescriptor(Fd, Mode, Compress);
-   };
-   FileFd(int const Fd, bool const AutoClose) : iFd(-1), Flags(0), d(NULL)
-   {
-      OpenDescriptor(Fd, ReadWrite, None, AutoClose);
-   };
+
+   FileFd(std::string FileName,unsigned int const Mode,unsigned long AccessMode = 0666);
+   FileFd(std::string FileName,unsigned int const Mode, CompressMode Compress, unsigned long AccessMode = 0666);
+   FileFd();
+   FileFd(int const Fd, unsigned int const Mode = ReadWrite, CompressMode Compress = None);
+   FileFd(int const Fd, bool const AutoClose);
    virtual ~FileFd();
 
    private:
-   FileFdPrivate* d;
+   FileFdPrivate * d;
+   APT_HIDDEN FileFd & operator=(const FileFd &);
    APT_HIDDEN bool OpenInternDescriptor(unsigned int const Mode, APT::Configuration::Compressor const &compressor);
 
    // private helpers to set Fail flag and call _error->Error
@@ -161,6 +150,7 @@ class FileFd
 
 bool RunScripts(const char *Cnf);
 bool CopyFile(FileFd &From,FileFd &To);
+bool RemoveFile(char const * const Function, std::string const &FileName);
 int GetLock(std::string File,bool Errors = true);
 bool FileExists(std::string File);
 bool RealFileExists(std::string File);
@@ -170,6 +160,10 @@ time_t GetModificationTime(std::string const &Path);
 bool Rename(std::string From, std::string To);
 
 std::string GetTempDir();
+std::string GetTempDir(std::string const &User);
+FileFd* GetTempFile(std::string const &Prefix = "",
+                    bool ImmediateUnlink = true,
+		    FileFd * const TmpFd = NULL);
 
 /** \brief Ensure the existence of the given Path
  *
@@ -193,6 +187,34 @@ pid_t ExecFork(std::set<int> keep_fds);
 void MergeKeepFdsFromConfiguration(std::set<int> &keep_fds);
 bool ExecWait(pid_t Pid,const char *Name,bool Reap = false);
 
+// check if the given file starts with a PGP cleartext signature
+bool StartsWithGPGClearTextSignature(std::string const &FileName);
+
+/** change file attributes to requested known good values
+ *
+ * The method skips the user:group setting if not root.
+ *
+ * @param requester is printed as functionname in error cases
+ * @param file is the file to be modified
+ * @param user is the (new) owner of the file, e.g. _apt
+ * @param group is the (new) group owning the file, e.g. root
+ * @param mode is the access mode of the file, e.g. 0644
+ */
+bool ChangeOwnerAndPermissionOfFile(char const * const requester, char const * const file, char const * const user, char const * const group, mode_t const mode);
+
+/**
+ * \brief Drop privileges
+ *
+ * Drop the privileges to the user _apt (or the one specified in
+ * APT::Sandbox::User). This does not set the supplementary group
+ * ids up correctly, it only uses the default group. Also prevent
+ * the process from gaining any new privileges afterwards, at least
+ * on Linux.
+ *
+ * \return true on success, false on failure with _error set
+ */
+bool DropPrivileges();
+
 // File string manipulators
 std::string flNotDir(std::string File);
 std::string flNotFile(std::string File);
@@ -200,7 +222,22 @@ std::string flNoLink(std::string File);
 std::string flExtension(std::string File);
 std::string flCombine(std::string Dir,std::string File);
 
+/** \brief Takes a file path and returns the absolute path
+ */
+std::string flAbsPath(std::string File);
+
 // simple c++ glob
 std::vector<std::string> Glob(std::string const &pattern, int flags=0);
+
+/** \brief Popen() implementation that execv() instead of using a shell
+ *
+ * \param Args the execv style command to run
+ * \param FileFd is a referenz to the FileFd to use for input or output
+ * \param Child a reference to the integer that stores the child pid
+ *        Note that you must call ExecWait() or similar to cleanup
+ * \param Mode is either FileFd::ReadOnly or FileFd::WriteOnly
+ * \return true on success, false on failure with _error set
+ */
+bool Popen(const char* Args[], FileFd &Fd, pid_t &Child, FileFd::OpenMode Mode);
 
 #endif

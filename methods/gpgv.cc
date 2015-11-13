@@ -5,6 +5,8 @@
 #include <apt-pkg/error.h>
 #include <apt-pkg/gpgv.h>
 #include <apt-pkg/strutl.h>
+#include <apt-pkg/fileutl.h>
+#include "aptmethod.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -14,6 +16,8 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -32,24 +36,25 @@ using std::vector;
 #define GNUPGREVKEYSIG "[GNUPG:] REVKEYSIG"
 #define GNUPGNODATA "[GNUPG:] NODATA"
 
-class GPGVMethod : public pkgAcqMethod
+class GPGVMethod : public aptMethod
 {
    private:
    string VerifyGetSigners(const char *file, const char *outfile,
-				vector<string> &GoodSigners, 
+				std::string const &key,
+				vector<string> &GoodSigners,
                                 vector<string> &BadSigners,
                                 vector<string> &WorthlessSigners,
 				vector<string> &NoPubKeySigners);
    
    protected:
-   virtual bool Fetch(FetchItem *Itm);
-   
+   virtual bool URIAcquire(std::string const &Message, FetchItem *Itm) APT_OVERRIDE;
    public:
    
-   GPGVMethod() : pkgAcqMethod("1.0",SingleInstance | SendConfig) {};
+   GPGVMethod() : aptMethod("gpgv","1.0",SingleInstance | SendConfig) {};
 };
 
 string GPGVMethod::VerifyGetSigners(const char *file, const char *outfile,
+					 std::string const &key,
 					 vector<string> &GoodSigners,
 					 vector<string> &BadSigners,
 					 vector<string> &WorthlessSigners,
@@ -61,6 +66,7 @@ string GPGVMethod::VerifyGetSigners(const char *file, const char *outfile,
       std::clog << "inside VerifyGetSigners" << std::endl;
 
    int fd[2];
+   bool const keyIsID = (key.empty() == false && key[0] != '/');
 
    if (pipe(fd) < 0)
       return "Couldn't create pipe";
@@ -69,39 +75,19 @@ string GPGVMethod::VerifyGetSigners(const char *file, const char *outfile,
    if (pid < 0)
       return string("Couldn't spawn new process") + strerror(errno);
    else if (pid == 0)
-      ExecGPGV(outfile, file, 3, fd);
+      ExecGPGV(outfile, file, 3, fd, (keyIsID ? "" : key));
    close(fd[1]);
 
    FILE *pipein = fdopen(fd[0], "r");
 
-   // Loop over the output of gpgv, and check the signatures.
-   size_t buffersize = 64;
-   char *buffer = (char *) malloc(buffersize);
-   size_t bufferoff = 0;
+   // Loop over the output of apt-key (which really is gnupg), and check the signatures.
+   std::vector<std::string> ValidSigners;
+   size_t buffersize = 0;
+   char *buffer = NULL;
    while (1)
    {
-      int c;
-
-      // Read a line.  Sigh.
-      while ((c = getc(pipein)) != EOF && c != '\n')
-      {
-	 if (bufferoff == buffersize)
-	 {
-	    char* newBuffer = (char *) realloc(buffer, buffersize *= 2);
-	    if (newBuffer == NULL)
-	    {
-	       free(buffer);
-	       return "Couldn't allocate a buffer big enough for reading";
-	    }
-	    buffer = newBuffer;
-	 }
-         *(buffer+bufferoff) = c;
-         bufferoff++;
-      }
-      if (bufferoff == 0 && c == EOF)
-         break;
-      *(buffer+bufferoff) = '\0';
-      bufferoff = 0;
+      if (getline(&buffer, &buffersize, pipein) == -1)
+	 break;
       if (Debug == true)
          std::clog << "Read: " << buffer << std::endl;
 
@@ -115,32 +101,31 @@ string GPGVMethod::VerifyGetSigners(const char *file, const char *outfile,
             std::clog << "Got BADSIG! " << std::endl;
          BadSigners.push_back(string(buffer+sizeof(GNUPGPREFIX)));
       }
-      
-      if (strncmp(buffer, GNUPGNOPUBKEY, sizeof(GNUPGNOPUBKEY)-1) == 0)
+      else if (strncmp(buffer, GNUPGNOPUBKEY, sizeof(GNUPGNOPUBKEY)-1) == 0)
       {
          if (Debug == true)
             std::clog << "Got NO_PUBKEY " << std::endl;
          NoPubKeySigners.push_back(string(buffer+sizeof(GNUPGPREFIX)));
       }
-      if (strncmp(buffer, GNUPGNODATA, sizeof(GNUPGBADSIG)-1) == 0)
+      else if (strncmp(buffer, GNUPGNODATA, sizeof(GNUPGBADSIG)-1) == 0)
       {
          if (Debug == true)
             std::clog << "Got NODATA! " << std::endl;
          BadSigners.push_back(string(buffer+sizeof(GNUPGPREFIX)));
       }
-      if (strncmp(buffer, GNUPGKEYEXPIRED, sizeof(GNUPGKEYEXPIRED)-1) == 0)
+      else if (strncmp(buffer, GNUPGKEYEXPIRED, sizeof(GNUPGKEYEXPIRED)-1) == 0)
       {
          if (Debug == true)
             std::clog << "Got KEYEXPIRED! " << std::endl;
          WorthlessSigners.push_back(string(buffer+sizeof(GNUPGPREFIX)));
       }
-      if (strncmp(buffer, GNUPGREVKEYSIG, sizeof(GNUPGREVKEYSIG)-1) == 0)
+      else if (strncmp(buffer, GNUPGREVKEYSIG, sizeof(GNUPGREVKEYSIG)-1) == 0)
       {
          if (Debug == true)
             std::clog << "Got REVKEYSIG! " << std::endl;
          WorthlessSigners.push_back(string(buffer+sizeof(GNUPGPREFIX)));
       }
-      if (strncmp(buffer, GNUPGGOODSIG, sizeof(GNUPGGOODSIG)-1) == 0)
+      else if (strncmp(buffer, GNUPGGOODSIG, sizeof(GNUPGGOODSIG)-1) == 0)
       {
          char *sig = buffer + sizeof(GNUPGPREFIX);
          char *p = sig + sizeof("GOODSIG");
@@ -151,27 +136,75 @@ string GPGVMethod::VerifyGetSigners(const char *file, const char *outfile,
             std::clog << "Got GOODSIG, key ID:" << sig << std::endl;
          GoodSigners.push_back(string(sig));
       }
+      else if (strncmp(buffer, GNUPGVALIDSIG, sizeof(GNUPGVALIDSIG)-1) == 0)
+      {
+         char *sig = buffer + sizeof(GNUPGVALIDSIG);
+         char *p = sig;
+         while (*p && isxdigit(*p))
+            p++;
+         *p = 0;
+         if (Debug == true)
+            std::clog << "Got VALIDSIG, key ID: " << sig << std::endl;
+         ValidSigners.push_back(string(sig));
+      }
    }
    fclose(pipein);
    free(buffer);
+
+   // apt-key has a --keyid parameter, but this requires gpg, so we call it without it
+   // and instead check after the fact which keyids where used for verification
+   if (keyIsID == true)
+   {
+      if (Debug == true)
+	 std::clog << "GoodSigs needs to be limited to keyid " << key << std::endl;
+      std::vector<std::string>::iterator const foundItr = std::find(ValidSigners.begin(), ValidSigners.end(), key);
+      bool const found = (foundItr != ValidSigners.end());
+      std::copy(GoodSigners.begin(), GoodSigners.end(), std::back_insert_iterator<std::vector<std::string> >(NoPubKeySigners));
+      if (found)
+      {
+	 // we look for GOODSIG here as well as an expired sig is a valid sig as well (but not a good one)
+	 std::string const goodlongkeyid = "GOODSIG " + key.substr(24, 16);
+	 bool const foundGood = std::find(GoodSigners.begin(), GoodSigners.end(), goodlongkeyid) != GoodSigners.end();
+	 if (Debug == true)
+	    std::clog << "Key " << key << " is valid sig, is " << goodlongkeyid << " also a good one? " << (foundGood ? "yes" : "no") << std::endl;
+	 GoodSigners.clear();
+	 if (foundGood)
+	 {
+	    GoodSigners.push_back(goodlongkeyid);
+	    NoPubKeySigners.erase(std::remove(NoPubKeySigners.begin(), NoPubKeySigners.end(), goodlongkeyid), NoPubKeySigners.end());
+	 }
+      }
+      else
+	 GoodSigners.clear();
+   }
 
    int status;
    waitpid(pid, &status, 0);
    if (Debug == true)
    {
-      std::clog << "gpgv exited\n";
+      ioprintf(std::clog, "gpgv exited with status %i\n", WEXITSTATUS(status));
    }
    
    if (WEXITSTATUS(status) == 0)
    {
-      if (GoodSigners.empty())
-         return _("Internal error: Good signature, but could not determine key fingerprint?!");
+      if (keyIsID)
+      {
+	 // gpgv will report success, but we want to enforce a certain keyring
+	 // so if we haven't found the key the valid we found is in fact invalid
+	 if (GoodSigners.empty())
+	    return _("At least one invalid signature was encountered.");
+      }
+      else
+      {
+	 if (GoodSigners.empty())
+	    return _("Internal error: Good signature, but could not determine key fingerprint?!");
+      }
       return "";
    }
    else if (WEXITSTATUS(status) == 1)
       return _("At least one invalid signature was encountered.");
    else if (WEXITSTATUS(status) == 111)
-      return _("Could not execute 'gpgv' to verify signature (is gpgv installed?)");
+      return _("Could not execute 'apt-key' to verify signature (is gnupg installed?)");
    else if (WEXITSTATUS(status) == 112)
    {
       // acquire system checks for "NODATA" to generate GPG errors (the others are only warnings)
@@ -181,14 +214,14 @@ string GPGVMethod::VerifyGetSigners(const char *file, const char *outfile,
       return errmsg;
    }
    else
-      return _("Unknown error executing gpgv");
+      return _("Unknown error executing apt-key");
 }
 
-bool GPGVMethod::Fetch(FetchItem *Itm)
+bool GPGVMethod::URIAcquire(std::string const &Message, FetchItem *Itm)
 {
-   URI Get = Itm->Uri;
-   string Path = Get.Host + Get.Path; // To account for relative paths
-   string keyID;
+   URI const Get = Itm->Uri;
+   string const Path = Get.Host + Get.Path; // To account for relative paths
+   std::string const key = LookupTag(Message, "Signed-By");
    vector<string> GoodSigners;
    vector<string> BadSigners;
    // a worthless signature is a expired or revoked one
@@ -199,8 +232,8 @@ bool GPGVMethod::Fetch(FetchItem *Itm)
    Res.Filename = Itm->DestFile;
    URIStart(Res);
 
-   // Run gpgv on file, extract contents and get the key ID of the signer
-   string msg = VerifyGetSigners(Path.c_str(), Itm->DestFile.c_str(),
+   // Run apt-key on file, extract contents and get the key ID of the signer
+   string msg = VerifyGetSigners(Path.c_str(), Itm->DestFile.c_str(), key,
                                  GoodSigners, BadSigners, WorthlessSigners,
                                  NoPubKeySigners);
    if (GoodSigners.empty() || !BadSigners.empty() || !NoPubKeySigners.empty())
@@ -251,7 +284,7 @@ bool GPGVMethod::Fetch(FetchItem *Itm)
 
    if (_config->FindB("Debug::Acquire::gpgv", false))
    {
-      std::clog << "gpgv succeeded\n";
+      std::clog << "apt-key succeeded\n";
    }
 
    return true;
@@ -261,7 +294,7 @@ bool GPGVMethod::Fetch(FetchItem *Itm)
 int main()
 {
    setlocale(LC_ALL, "");
-   
+
    GPGVMethod Mth;
 
    return Mth.Run();

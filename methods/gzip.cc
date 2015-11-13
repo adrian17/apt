@@ -18,6 +18,7 @@
 #include <apt-pkg/hashes.h>
 #include <apt-pkg/strutl.h>
 #include <apt-pkg/aptconfiguration.h>
+#include "aptmethod.h"
 
 #include <string.h>
 #include <sys/stat.h>
@@ -28,17 +29,15 @@
 #include <apti18n.h>
 									/*}}}*/
 
-const char *Prog;
-
-class GzipMethod : public pkgAcqMethod
+class GzipMethod : public aptMethod
 {
-   virtual bool Fetch(FetchItem *Itm);
-   
-   public:
-   
-   GzipMethod() : pkgAcqMethod("1.1",SingleInstance | SendConfig) {};
-};
+   std::string const Prog;
+   virtual bool Fetch(FetchItem *Itm) APT_OVERRIDE;
 
+   public:
+
+   explicit GzipMethod(std::string const &pProg) : aptMethod(pProg.c_str(),"1.1",SingleInstance | SendConfig), Prog(pProg) {};
+};
 
 // GzipMethod::Fetch - Decompress the passed URI			/*{{{*/
 // ---------------------------------------------------------------------
@@ -58,31 +57,39 @@ bool GzipMethod::Fetch(FetchItem *Itm)
       if (compressor->Name == Prog)
 	 break;
    if (compressor == compressors.end())
-      return _error->Error("Extraction of file %s requires unknown compressor %s", Path.c_str(), Prog);
+      return _error->Error("Extraction of file %s requires unknown compressor %s", Path.c_str(), Prog.c_str());
 
    // Open the source and destination files
-   FileFd From, To;
+   FileFd From;
    if (_config->FindB("Method::Compress", false) == false)
    {
       From.Open(Path, FileFd::ReadOnly, *compressor);
       if(From.FileSize() == 0)
 	 return _error->Error(_("Empty files can't be valid archives"));
-      To.Open(Itm->DestFile, FileFd::WriteAtomic);
    }
    else
-   {
       From.Open(Path, FileFd::ReadOnly);
-      To.Open(Itm->DestFile, FileFd::WriteOnly | FileFd::Create | FileFd::Empty, *compressor);
-   }
-   To.EraseOnFailure();
-
-   if (From.IsOpen() == false || From.Failed() == true ||
-	 To.IsOpen() == false || To.Failed() == true)
+   if (From.IsOpen() == false || From.Failed() == true)
       return false;
 
+   FileFd To;
+   if (Itm->DestFile != "/dev/null")
+   {
+      if (_config->FindB("Method::Compress", false) == false)
+	 To.Open(Itm->DestFile, FileFd::WriteAtomic);
+      else
+	 To.Open(Itm->DestFile, FileFd::WriteOnly | FileFd::Create | FileFd::Empty, *compressor);
+
+      if (To.IsOpen() == false || To.Failed() == true)
+	 return false;
+      To.EraseOnFailure();
+   }
+
+
    // Read data from source, generate checksums and write
-   Hashes Hash;
+   Hashes Hash(Itm->ExpectedHashes);
    bool Failed = false;
+   Res.Size = 0;
    while (1) 
    {
       unsigned char Buffer[4*1024];
@@ -90,14 +97,16 @@ bool GzipMethod::Fetch(FetchItem *Itm)
       
       if (!From.Read(Buffer,sizeof(Buffer),&Count))
       {
-	 To.OpFail();
+	 if (To.IsOpen())
+	    To.OpFail();
 	 return false;
       }
       if (Count == 0)
 	 break;
+      Res.Size += Count;
 
       Hash.Add(Buffer,Count);
-      if (To.Write(Buffer,Count) == false)
+      if (To.IsOpen() && To.Write(Buffer,Count) == false)
       {
 	 Failed = true;
 	 break;
@@ -105,23 +114,25 @@ bool GzipMethod::Fetch(FetchItem *Itm)
    }
    
    From.Close();
-   Res.Size = To.FileSize();
    To.Close();
 
    if (Failed == true)
       return false;
 
    // Transfer the modification times
-   struct stat Buf;
-   if (stat(Path.c_str(),&Buf) != 0)
-      return _error->Errno("stat",_("Failed to stat"));
+   if (Itm->DestFile != "/dev/null")
+   {
+      struct stat Buf;
+      if (stat(Path.c_str(),&Buf) != 0)
+	 return _error->Errno("stat",_("Failed to stat"));
 
-   struct timeval times[2];
-   times[0].tv_sec = Buf.st_atime;
-   Res.LastModified = times[1].tv_sec = Buf.st_mtime;
-   times[0].tv_usec = times[1].tv_usec = 0;
-   if (utimes(Itm->DestFile.c_str(), times) != 0)
-      return _error->Errno("utimes",_("Failed to set modification time"));
+      struct timeval times[2];
+      times[0].tv_sec = Buf.st_atime;
+      Res.LastModified = times[1].tv_sec = Buf.st_mtime;
+      times[0].tv_usec = times[1].tv_usec = 0;
+      if (utimes(Itm->DestFile.c_str(), times) != 0)
+	 return _error->Errno("utimes",_("Failed to set modification time"));
+   }
 
    // Return a Done response
    Res.TakeHashes(Hash);
@@ -135,9 +146,6 @@ int main(int, char *argv[])
 {
    setlocale(LC_ALL, "");
 
-   Prog = strrchr(argv[0],'/');
-   ++Prog;
-
-   GzipMethod Mth;
+   GzipMethod Mth(flNotDir(argv[0]));
    return Mth.Run();
 }

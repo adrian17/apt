@@ -47,9 +47,12 @@
 #include <signal.h>
 #include <errno.h>
 #include <glob.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <set>
 #include <algorithm>
+#include <memory>
 
 #ifdef HAVE_ZLIB
 	#include <zlib.h>
@@ -62,6 +65,10 @@
 #endif
 #include <endian.h>
 #include <stdint.h>
+
+#if __gnu_linux__
+#include <sys/prctl.h>
+#endif
 
 #include <apti18n.h>
 									/*}}}*/
@@ -151,24 +158,33 @@ bool CopyFile(FileFd &From,FileFd &To)
    if (From.IsOpen() == false || To.IsOpen() == false ||
 	 From.Failed() == true || To.Failed() == true)
       return false;
-   
-   // Buffered copy between fds
-   SPtrArray<unsigned char> Buf = new unsigned char[64000];
-   unsigned long long Size = From.Size();
-   while (Size != 0)
-   {
-      unsigned long long ToRead = Size;
-      if (Size > 64000)
-	 ToRead = 64000;
-      
-      if (From.Read(Buf,ToRead) == false || 
-	  To.Write(Buf,ToRead) == false)
-	 return false;
-      
-      Size -= ToRead;
-   }
 
-   return true;   
+   // Buffered copy between fds
+   std::unique_ptr<unsigned char[]> Buf(new unsigned char[64000]);
+   constexpr unsigned long long BufSize = sizeof(Buf.get())/sizeof(Buf.get()[0]);
+   unsigned long long ToRead = 0;
+   do {
+      if (From.Read(Buf.get(),BufSize, &ToRead) == false ||
+	  To.Write(Buf.get(),ToRead) == false)
+	 return false;
+   } while (ToRead != 0);
+
+   return true;
+}
+									/*}}}*/
+bool RemoveFile(char const * const Function, std::string const &FileName)/*{{{*/
+{
+   if (FileName == "/dev/null")
+      return true;
+   errno = 0;
+   if (unlink(FileName.c_str()) != 0)
+   {
+      if (errno == ENOENT)
+	 return true;
+
+      return _error->WarningE(Function,_("Problem unlinking the file %s"), FileName.c_str());
+   }
+   return true;
 }
 									/*}}}*/
 // GetLock - Gets a lock file						/*{{{*/
@@ -656,6 +672,22 @@ string flCombine(string Dir,string File)
    return Dir + '/' + File;
 }
 									/*}}}*/
+// flAbsPath - Return the absolute path of the filename			/*{{{*/
+// ---------------------------------------------------------------------
+/* */
+string flAbsPath(string File)
+{
+   char *p = realpath(File.c_str(), NULL);
+   if (p == NULL)
+   {
+      _error->Errno("realpath", "flAbsPath on %s failed", File.c_str());
+      return "";
+   }
+   std::string AbsPath(p);
+   free(p);
+   return AbsPath;
+}
+									/*}}}*/
 // SetCloseExec - Set the close on exec flag				/*{{{*/
 // ---------------------------------------------------------------------
 /* */
@@ -850,6 +882,42 @@ bool ExecWait(pid_t Pid,const char *Name,bool Reap)
    return true;
 }
 									/*}}}*/
+// StartsWithGPGClearTextSignature - Check if a file is Pgp/GPG clearsigned	/*{{{*/
+bool StartsWithGPGClearTextSignature(string const &FileName)
+{
+   static const char* SIGMSG = "-----BEGIN PGP SIGNED MESSAGE-----\n";
+   char buffer[strlen(SIGMSG)+1];
+   FILE* gpg = fopen(FileName.c_str(), "r");
+   if (gpg == NULL)
+      return false;
+
+   char const * const test = fgets(buffer, sizeof(buffer), gpg);
+   fclose(gpg);
+   if (test == NULL || strcmp(buffer, SIGMSG) != 0)
+      return false;
+
+   return true;
+}
+									/*}}}*/
+// ChangeOwnerAndPermissionOfFile - set file attributes to requested values /*{{{*/
+bool ChangeOwnerAndPermissionOfFile(char const * const requester, char const * const file, char const * const user, char const * const group, mode_t const mode)
+{
+   if (strcmp(file, "/dev/null") == 0)
+      return true;
+   bool Res = true;
+   if (getuid() == 0 && strlen(user) != 0 && strlen(group) != 0) // if we aren't root, we can't chown, so don't try it
+   {
+      // ensure the file is owned by root and has good permissions
+      struct passwd const * const pw = getpwnam(user);
+      struct group const * const gr = getgrnam(group);
+      if (pw != NULL && gr != NULL && chown(file, pw->pw_uid, gr->gr_gid) != 0)
+	 Res &= _error->WarningE(requester, "chown to %s:%s of file %s failed", user, group, file);
+   }
+   if (chmod(file, mode) != 0)
+      Res &= _error->WarningE(requester, "chmod 0%o of file %s failed", mode, file);
+   return Res;
+}
+									/*}}}*/
 
 class FileFdPrivate {							/*{{{*/
 	public:
@@ -868,7 +936,7 @@ class FileFdPrivate {							/*{{{*/
 	   bool eof;
 	   bool compressing;
 
-	   LZMAFILE() : file(NULL), eof(false), compressing(false) {}
+	   LZMAFILE() : file(NULL), eof(false), compressing(false) { buffer[0] = '\0'; }
 	   ~LZMAFILE() {
 	      if (compressing == true)
 	      {
@@ -967,6 +1035,25 @@ class FileFdPrivate {							/*{{{*/
 	~FileFdPrivate() { CloseDown(""); }
 };
 									/*}}}*/
+// FileFd Constructors							/*{{{*/
+FileFd::FileFd(std::string FileName,unsigned int const Mode,unsigned long AccessMode) : iFd(-1), Flags(0), d(NULL)
+{
+   Open(FileName,Mode, None, AccessMode);
+}
+FileFd::FileFd(std::string FileName,unsigned int const Mode, CompressMode Compress, unsigned long AccessMode) : iFd(-1), Flags(0), d(NULL)
+{
+   Open(FileName,Mode, Compress, AccessMode);
+}
+FileFd::FileFd() : iFd(-1), Flags(AutoClose), d(NULL) {}
+FileFd::FileFd(int const Fd, unsigned int const Mode, CompressMode Compress) : iFd(-1), Flags(0), d(NULL)
+{
+   OpenDescriptor(Fd, Mode, Compress);
+}
+FileFd::FileFd(int const Fd, bool const AutoClose) : iFd(-1), Flags(0), d(NULL)
+{
+   OpenDescriptor(Fd, ReadWrite, None, AutoClose);
+}
+									/*}}}*/
 // FileFd::Open - Open a file						/*{{{*/
 // ---------------------------------------------------------------------
 /* The most commonly used open mode combinations are given with Mode */
@@ -1052,24 +1139,28 @@ bool FileFd::Open(string FileName,unsigned int const Mode,APT::Configuration::Co
    if ((Mode & ReadWrite) == 0)
       return FileFdError("No openmode provided in FileFd::Open for %s", FileName.c_str());
 
-   if ((Mode & Atomic) == Atomic)
+   unsigned int OpenMode = Mode;
+   if (FileName == "/dev/null")
+      OpenMode = OpenMode & ~(Atomic | Exclusive | Create | Empty);
+
+   if ((OpenMode & Atomic) == Atomic)
    {
       Flags |= Replace;
    }
-   else if ((Mode & (Exclusive | Create)) == (Exclusive | Create))
+   else if ((OpenMode & (Exclusive | Create)) == (Exclusive | Create))
    {
       // for atomic, this will be done by rename in Close()
-      unlink(FileName.c_str());
+      RemoveFile("FileFd::Open", FileName);
    }
-   if ((Mode & Empty) == Empty)
+   if ((OpenMode & Empty) == Empty)
    {
       struct stat Buf;
       if (lstat(FileName.c_str(),&Buf) == 0 && S_ISLNK(Buf.st_mode))
-	 unlink(FileName.c_str());
+	 RemoveFile("FileFd::Open", FileName);
    }
 
    int fileflags = 0;
-   #define if_FLAGGED_SET(FLAG, MODE) if ((Mode & FLAG) == FLAG) fileflags |= MODE
+   #define if_FLAGGED_SET(FLAG, MODE) if ((OpenMode & FLAG) == FLAG) fileflags |= MODE
    if_FLAGGED_SET(ReadWrite, O_RDWR);
    else if_FLAGGED_SET(ReadOnly, O_RDONLY);
    else if_FLAGGED_SET(WriteOnly, O_WRONLY);
@@ -1079,7 +1170,7 @@ bool FileFd::Open(string FileName,unsigned int const Mode,APT::Configuration::Co
    if_FLAGGED_SET(Exclusive, O_EXCL);
    #undef if_FLAGGED_SET
 
-   if ((Mode & Atomic) == Atomic)
+   if ((OpenMode & Atomic) == Atomic)
    {
       char *name = strdup((FileName + ".XXXXXX").c_str());
 
@@ -1106,7 +1197,7 @@ bool FileFd::Open(string FileName,unsigned int const Mode,APT::Configuration::Co
       iFd = open(FileName.c_str(), fileflags, AccessMode);
 
    this->FileName = FileName;
-   if (iFd == -1 || OpenInternDescriptor(Mode, compressor) == false)
+   if (iFd == -1 || OpenInternDescriptor(OpenMode, compressor) == false)
    {
       if (iFd != -1)
       {
@@ -1497,7 +1588,7 @@ bool FileFd::Read(void *To,unsigned long long Size,unsigned long long *Actual)
 	    int err;
 	    char const * const errmsg = BZ2_bzerror(d->bz2, &err);
 	    if (err != BZ_IO_ERROR)
-	       return FileFdError("BZ2_bzread: %s (%d: %s)", _("Read error"), err, errmsg);
+	       return FileFdError("BZ2_bzread: %s %s (%d: %s)", FileName.c_str(), _("Read error"), err, errmsg);
 	 }
 #endif
 #ifdef HAVE_LZMA
@@ -1928,13 +2019,13 @@ bool FileFd::Close()
    {
       if ((Flags & Compressed) != Compressed && iFd > 0 && close(iFd) != 0)
 	 Res &= _error->Errno("close",_("Problem closing the file %s"), FileName.c_str());
+   }
 
-      if (d != NULL)
-      {
-	 Res &= d->CloseDown(FileName);
-	 delete d;
-	 d = NULL;
-      }
+   if (d != NULL)
+   {
+      Res &= d->CloseDown(FileName);
+      delete d;
+      d = NULL;
    }
 
    if ((Flags & Replace) == Replace) {
@@ -1949,8 +2040,7 @@ bool FileFd::Close()
 
    if ((Flags & Fail) == Fail && (Flags & DelOnFail) == DelOnFail &&
        FileName.empty() == false)
-      if (unlink(FileName.c_str()) != 0)
-	 Res &= _error->WarningE("unlnk",_("Problem unlinking the file %s"), FileName.c_str());
+      Res &= RemoveFile("FileFd::Close", FileName);
 
    if (Res == false)
       Flags |= Fail;
@@ -2008,10 +2098,7 @@ APT_DEPRECATED gzFile FileFd::gzFd() {
 #endif
 }
 
-
-// Glob - wrapper around "glob()"                                      /*{{{*/
-// ---------------------------------------------------------------------
-/* */
+// Glob - wrapper around "glob()"					/*{{{*/
 std::vector<std::string> Glob(std::string const &pattern, int flags)
 {
    std::vector<std::string> result;
@@ -2037,8 +2124,7 @@ std::vector<std::string> Glob(std::string const &pattern, int flags)
    return result;
 }
 									/*}}}*/
-
-std::string GetTempDir()
+std::string GetTempDir()						/*{{{*/
 {
    const char *tmpdir = getenv("TMPDIR");
 
@@ -2047,21 +2133,241 @@ std::string GetTempDir()
       tmpdir = P_tmpdir;
 #endif
 
-   // check that tmpdir is set and exists
    struct stat st;
-   if (!tmpdir || strlen(tmpdir) == 0 || stat(tmpdir, &st) != 0)
+   if (!tmpdir || strlen(tmpdir) == 0 || // tmpdir is set
+	 stat(tmpdir, &st) != 0 || (st.st_mode & S_IFDIR) == 0) // exists and is directory
+      tmpdir = "/tmp";
+   else if (geteuid() != 0 && // root can do everything anyway
+	 faccessat(-1, tmpdir, R_OK | W_OK | X_OK, AT_EACCESS | AT_SYMLINK_NOFOLLOW) != 0) // current user has rwx access to directory
       tmpdir = "/tmp";
 
    return string(tmpdir);
 }
+std::string GetTempDir(std::string const &User)
+{
+   // no need/possibility to drop privs
+   if(getuid() != 0 || User.empty() || User == "root")
+      return GetTempDir();
 
-bool Rename(std::string From, std::string To)
+   struct passwd const * const pw = getpwnam(User.c_str());
+   if (pw == NULL)
+      return GetTempDir();
+
+   gid_t const old_euid = geteuid();
+   gid_t const old_egid = getegid();
+   if (setegid(pw->pw_gid) != 0)
+      _error->Errno("setegid", "setegid %u failed", pw->pw_gid);
+   if (seteuid(pw->pw_uid) != 0)
+      _error->Errno("seteuid", "seteuid %u failed", pw->pw_uid);
+
+   std::string const tmp = GetTempDir();
+
+   if (seteuid(old_euid) != 0)
+      _error->Errno("seteuid", "seteuid %u failed", old_euid);
+   if (setegid(old_egid) != 0)
+      _error->Errno("setegid", "setegid %u failed", old_egid);
+
+   return tmp;
+}
+									/*}}}*/
+FileFd* GetTempFile(std::string const &Prefix, bool ImmediateUnlink, FileFd * const TmpFd)	/*{{{*/
+{
+   char fn[512];
+   FileFd * const Fd = TmpFd == NULL ? new FileFd() : TmpFd;
+
+   std::string const tempdir = GetTempDir();
+   snprintf(fn, sizeof(fn), "%s/%s.XXXXXX",
+            tempdir.c_str(), Prefix.c_str());
+   int const fd = mkstemp(fn);
+   if(ImmediateUnlink)
+      unlink(fn);
+   if (fd < 0)
+   {
+      _error->Errno("GetTempFile",_("Unable to mkstemp %s"), fn);
+      return NULL;
+   }
+   if (!Fd->OpenDescriptor(fd, FileFd::ReadWrite, FileFd::None, true))
+   {
+      _error->Errno("GetTempFile",_("Unable to write to %s"),fn);
+      return NULL;
+   }
+   return Fd;
+}
+									/*}}}*/
+bool Rename(std::string From, std::string To)				/*{{{*/
 {
    if (rename(From.c_str(),To.c_str()) != 0)
    {
       _error->Error(_("rename failed, %s (%s -> %s)."),strerror(errno),
                     From.c_str(),To.c_str());
       return false;
-   }   
+   }
    return true;
 }
+									/*}}}*/
+bool Popen(const char* Args[], FileFd &Fd, pid_t &Child, FileFd::OpenMode Mode)/*{{{*/
+{
+   int fd;
+   if (Mode != FileFd::ReadOnly && Mode != FileFd::WriteOnly)
+      return _error->Error("Popen supports ReadOnly (x)or WriteOnly mode only");
+
+   int Pipe[2] = {-1, -1};
+   if(pipe(Pipe) != 0)
+      return _error->Errno("pipe", _("Failed to create subprocess IPC"));
+
+   std::set<int> keep_fds;
+   keep_fds.insert(Pipe[0]);
+   keep_fds.insert(Pipe[1]);
+   Child = ExecFork(keep_fds);
+   if(Child < 0)
+      return _error->Errno("fork", "Failed to fork");
+   if(Child == 0)
+   {
+      if(Mode == FileFd::ReadOnly)
+      {
+         close(Pipe[0]);
+         fd = Pipe[1];
+      }
+      else if(Mode == FileFd::WriteOnly)
+      {
+         close(Pipe[1]);
+         fd = Pipe[0];
+      }
+
+      if(Mode == FileFd::ReadOnly)
+      {
+         dup2(fd, 1);
+         dup2(fd, 2);
+      } else if(Mode == FileFd::WriteOnly)
+         dup2(fd, 0);
+
+      execv(Args[0], (char**)Args);
+      _exit(100);
+   }
+   if(Mode == FileFd::ReadOnly)
+   {
+      close(Pipe[1]);
+      fd = Pipe[0];
+   }
+   else if(Mode == FileFd::WriteOnly)
+   {
+      close(Pipe[0]);
+      fd = Pipe[1];
+   }
+   else
+      return _error->Error("Popen supports ReadOnly (x)or WriteOnly mode only");
+   Fd.OpenDescriptor(fd, Mode, FileFd::None, true);
+
+   return true;
+}
+									/*}}}*/
+bool DropPrivileges()							/*{{{*/
+{
+   if(_config->FindB("Debug::NoDropPrivs", false) == true)
+      return true;
+
+#if __gnu_linux__
+#if defined(PR_SET_NO_NEW_PRIVS) && ( PR_SET_NO_NEW_PRIVS != 38 )
+#error "PR_SET_NO_NEW_PRIVS is defined, but with a different value than expected!"
+#endif
+   // see prctl(2), needs linux3.5 at runtime - magic constant to avoid it at buildtime
+   int ret = prctl(38, 1, 0, 0, 0);
+   // ignore EINVAL - kernel is too old to understand the option
+   if(ret < 0 && errno != EINVAL)
+      _error->Warning("PR_SET_NO_NEW_PRIVS failed with %i", ret);
+#endif
+
+   // empty setting disables privilege dropping - this also ensures
+   // backward compatibility, see bug #764506
+   const std::string toUser = _config->Find("APT::Sandbox::User");
+   if (toUser.empty())
+      return true;
+
+   // uid will be 0 in the end, but gid might be different anyway
+   uid_t const old_uid = getuid();
+   gid_t const old_gid = getgid();
+
+   if (old_uid != 0)
+      return true;
+
+   struct passwd *pw = getpwnam(toUser.c_str());
+   if (pw == NULL)
+      return _error->Error("No user %s, can not drop rights", toUser.c_str());
+
+   // Do not change the order here, it might break things
+   // Get rid of all our supplementary groups first
+   if (setgroups(1, &pw->pw_gid))
+      return _error->Errno("setgroups", "Failed to setgroups");
+
+   // Now change the group ids to the new user
+#ifdef HAVE_SETRESGID
+   if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) != 0)
+      return _error->Errno("setresgid", "Failed to set new group ids");
+#else
+   if (setegid(pw->pw_gid) != 0)
+      return _error->Errno("setegid", "Failed to setegid");
+
+   if (setgid(pw->pw_gid) != 0)
+      return _error->Errno("setgid", "Failed to setgid");
+#endif
+
+   // Change the user ids to the new user
+#ifdef HAVE_SETRESUID
+   if (setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) != 0)
+      return _error->Errno("setresuid", "Failed to set new user ids");
+#else
+   if (setuid(pw->pw_uid) != 0)
+      return _error->Errno("setuid", "Failed to setuid");
+   if (seteuid(pw->pw_uid) != 0)
+      return _error->Errno("seteuid", "Failed to seteuid");
+#endif
+
+   // Verify that the user has only a single group, and the correct one
+   gid_t groups[1];
+   if (getgroups(1, groups) != 1)
+      return _error->Errno("getgroups", "Could not get new groups");
+   if (groups[0] != pw->pw_gid)
+      return _error->Error("Could not switch group");
+
+   // Verify that gid, egid, uid, and euid changed
+   if (getgid() != pw->pw_gid)
+      return _error->Error("Could not switch group");
+   if (getegid() != pw->pw_gid)
+      return _error->Error("Could not switch effective group");
+   if (getuid() != pw->pw_uid)
+      return _error->Error("Could not switch user");
+   if (geteuid() != pw->pw_uid)
+      return _error->Error("Could not switch effective user");
+
+#ifdef HAVE_GETRESUID
+   // verify that the saved set-user-id was changed as well
+   uid_t ruid = 0;
+   uid_t euid = 0;
+   uid_t suid = 0;
+   if (getresuid(&ruid, &euid, &suid))
+      return _error->Errno("getresuid", "Could not get saved set-user-ID");
+   if (suid != pw->pw_uid)
+      return _error->Error("Could not switch saved set-user-ID");
+#endif
+
+#ifdef HAVE_GETRESGID
+   // verify that the saved set-group-id was changed as well
+   gid_t rgid = 0;
+   gid_t egid = 0;
+   gid_t sgid = 0;
+   if (getresgid(&rgid, &egid, &sgid))
+      return _error->Errno("getresuid", "Could not get saved set-group-ID");
+   if (sgid != pw->pw_gid)
+      return _error->Error("Could not switch saved set-group-ID");
+#endif
+
+   // Check that uid and gid changes do not work anymore
+   if (pw->pw_gid != old_gid && (setgid(old_gid) != -1 || setegid(old_gid) != -1))
+      return _error->Error("Could restore a gid to root, privilege dropping did not work");
+
+   if (pw->pw_uid != old_uid && (setuid(old_uid) != -1 || seteuid(old_uid) != -1))
+      return _error->Error("Could restore a uid to root, privilege dropping did not work");
+
+   return true;
+}
+									/*}}}*/

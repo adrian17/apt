@@ -17,18 +17,22 @@ class CLT: public CommandLine {
       }
 };
 
-#define EXPECT_CMD(x, ...) { const char * const argv[] = { __VA_ARGS__ }; EXPECT_EQ(x, CLT::AsString(argv, sizeof(argv)/sizeof(argv[0]))); }
+bool ShowHelp(CommandLine &) {return false;}
+std::vector<aptDispatchWithHelp> GetCommands() {return {};}
+
 
 TEST(CommandLineTest,SaveInConfig)
 {
-   EXPECT_CMD("apt-get install -sf",
+#define APT_EXPECT_CMD(x, ...) { const char * const argv[] = { __VA_ARGS__ }; EXPECT_EQ(x, CLT::AsString(argv, sizeof(argv)/sizeof(argv[0]))); }
+   APT_EXPECT_CMD("apt-get install -sf",
 	 "apt-get", "install", "-sf");
-   EXPECT_CMD("apt-cache -s apt -so Debug::test=Test",
+   APT_EXPECT_CMD("apt-cache -s apt -so Debug::test=Test",
 	 "apt-cache", "-s", "apt", "-so", "Debug::test=Test");
-   EXPECT_CMD("apt-cache -s apt -so Debug::test=\"Das ist ein Test\"",
+   APT_EXPECT_CMD("apt-cache -s apt -so Debug::test=\"Das ist ein Test\"",
 	 "apt-cache", "-s", "apt", "-so", "Debug::test=Das ist ein Test");
-   EXPECT_CMD("apt-cache -s apt --hallo test=1.0",
+   APT_EXPECT_CMD("apt-cache -s apt --hallo test=1.0",
 	 "apt-cache", "-s", "apt", "--hallo", "test=1.0");
+#undef APT_EXPECT_CMD
 }
 TEST(CommandLineTest,Parsing)
 {
@@ -96,7 +100,7 @@ TEST(CommandLineTest,GetCommand)
    char const * argv[] = { "apt-get", "-t", "unstable", "remove", "-d", "foo" };
    char const * com = CommandLine::GetCommand(Cmds, sizeof(argv)/sizeof(argv[0]), argv);
    EXPECT_STREQ("remove", com);
-   std::vector<CommandLine::Args> Args = getCommandArgs("apt-get", com);
+   std::vector<CommandLine::Args> Args = getCommandArgs(APT_CMD::APT_GET, com);
    ::Configuration c;
    CommandLine CmdL(Args.data(), &c);
    ASSERT_TRUE(CmdL.Parse(sizeof(argv)/sizeof(argv[0]), argv));
@@ -110,7 +114,7 @@ TEST(CommandLineTest,GetCommand)
    char const * argv[] = {"apt-get", "-t", "unstable", "remove", "--", "-d", "foo" };
    char const * com = CommandLine::GetCommand(Cmds, sizeof(argv)/sizeof(argv[0]), argv);
    EXPECT_STREQ("remove", com);
-   std::vector<CommandLine::Args> Args = getCommandArgs("apt-get", com);
+   std::vector<CommandLine::Args> Args = getCommandArgs(APT_CMD::APT_GET, com);
    ::Configuration c;
    CommandLine CmdL(Args.data(), &c);
    ASSERT_TRUE(CmdL.Parse(sizeof(argv)/sizeof(argv[0]), argv));
@@ -125,7 +129,7 @@ TEST(CommandLineTest,GetCommand)
    char const * argv[] = {"apt-get", "-t", "unstable", "--", "remove", "-d", "foo" };
    char const * com = CommandLine::GetCommand(Cmds, sizeof(argv)/sizeof(argv[0]), argv);
    EXPECT_STREQ("remove", com);
-   std::vector<CommandLine::Args> Args = getCommandArgs("apt-get", com);
+   std::vector<CommandLine::Args> Args = getCommandArgs(APT_CMD::APT_GET, com);
    ::Configuration c;
    CommandLine CmdL(Args.data(), &c);
    ASSERT_TRUE(CmdL.Parse(sizeof(argv)/sizeof(argv[0]), argv));
@@ -140,7 +144,7 @@ TEST(CommandLineTest,GetCommand)
    char const * argv[] = {"apt-get", "install", "-t", "unstable", "--", "remove", "-d", "foo" };
    char const * com = CommandLine::GetCommand(Cmds, sizeof(argv)/sizeof(argv[0]), argv);
    EXPECT_STREQ("install", com);
-   std::vector<CommandLine::Args> Args = getCommandArgs("apt-get", com);
+   std::vector<CommandLine::Args> Args = getCommandArgs(APT_CMD::APT_GET, com);
    ::Configuration c;
    CommandLine CmdL(Args.data(), &c);
    ASSERT_TRUE(CmdL.Parse(sizeof(argv)/sizeof(argv[0]), argv));

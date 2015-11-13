@@ -12,9 +12,9 @@ insertpackage 'unstable' 'autoconf' 'all' '1' 'Depends: m4'
 
 setupaptarchive
 
-testequal 'Reading package lists...
+testsuccessequal 'Reading package lists...
 Building dependency tree...
-The following extra packages will be installed:
+The following additional packages will be installed:
   m4
 The following NEW packages will be installed:
   autoconf m4

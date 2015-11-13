@@ -34,6 +34,9 @@ CommandLine::CommandLine(Args *AList,Configuration *Conf) : ArgList(AList),
                                  Conf(Conf), FileList(0)
 {
 }
+CommandLine::CommandLine() : ArgList(NULL), Conf(NULL), FileList(0)
+{
+}
 									/*}}}*/
 // CommandLine::~CommandLine - Destructor				/*{{{*/
 // ---------------------------------------------------------------------
@@ -121,7 +124,7 @@ bool CommandLine::Parse(int argc,const char **argv)
 	    Args *A;
 	    for (A = ArgList; A->end() == false && A->ShortOpt != *Opt; A++);
 	    if (A->end() == true)
-	       return _error->Error(_("Command line option '%c' [from %s] is not known."),*Opt,argv[I]);
+	       return _error->Error(_("Command line option '%c' [from %s] is not understood in combination with the other options."),*Opt,argv[I]);
 
 	    if (HandleOpt(I,argc,argv,Opt,A) == false)
 	       return false;
@@ -146,7 +149,7 @@ bool CommandLine::Parse(int argc,const char **argv)
       {
          Opt = (const char*) memchr(Opt, '-', OptEnd - Opt);
 	 if (Opt == NULL)
-	    return _error->Error(_("Command line option %s is not understood"),argv[I]);
+	    return _error->Error(_("Command line option %s is not understood in combination with the other options"),argv[I]);
 	 Opt++;
 	 
 	 for (A = ArgList; A->end() == false &&
@@ -155,7 +158,7 @@ bool CommandLine::Parse(int argc,const char **argv)
 
 	 // Failed again..
 	 if (A->end() == true && OptEnd - Opt != 1)
-	    return _error->Error(_("Command line option %s is not understood"),argv[I]);
+	    return _error->Error(_("Command line option %s is not understood in combination with the other options"),argv[I]);
 
 	 // The option could be a single letter option prefixed by a no-..
 	 if (A->end() == true)
@@ -163,7 +166,7 @@ bool CommandLine::Parse(int argc,const char **argv)
 	    for (A = ArgList; A->end() == false && A->ShortOpt != *Opt; A++);
 	    
 	    if (A->end() == true)
-	       return _error->Error(_("Command line option %s is not understood"),argv[I]);
+	       return _error->Error(_("Command line option %s is not understood in combination with the other options"),argv[I]);
 	 }
 	 
 	 // The option is not boolean
@@ -371,9 +374,7 @@ unsigned int CommandLine::FileSize() const
 }
 									/*}}}*/
 // CommandLine::DispatchArg - Do something with the first arg		/*{{{*/
-// ---------------------------------------------------------------------
-/* */
-bool CommandLine::DispatchArg(Dispatch *Map,bool NoMatch)
+bool CommandLine::DispatchArg(Dispatch const * const Map,bool NoMatch)
 {
    int I;
    for (I = 0; Map[I].Match != 0; I++)
@@ -395,6 +396,11 @@ bool CommandLine::DispatchArg(Dispatch *Map,bool NoMatch)
    }
    
    return false;
+}
+bool CommandLine::DispatchArg(Dispatch *Map,bool NoMatch)
+{
+   Dispatch const * const Map2 = Map;
+   return DispatchArg(Map2, NoMatch);
 }
 									/*}}}*/
 // CommandLine::SaveInConfig - for output later in a logfile or so	/*{{{*/

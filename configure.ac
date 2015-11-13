@@ -12,13 +12,14 @@ dnl not used but STL is.
 dnl 'make -f Makefile startup' will generate the configure file from
 dnl configure.ac correctly and can be run at any time
 
-AC_PREREQ(2.50)
-AC_INIT(configure.ac)
+AC_PREREQ([2.68])
+AC_INIT
+AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR(buildlib)
 AC_CONFIG_HEADER(include/config.h:buildlib/config.h.in include/apti18n.h:buildlib/apti18n.h.in)
 
 PACKAGE="apt"
-PACKAGE_VERSION="1.0.10.2ubuntu1"
+PACKAGE_VERSION="1.1~exp15ubuntu1"
 PACKAGE_MAIL="APT Development Team <deity@lists.debian.org>"
 AC_DEFINE_UNQUOTED(PACKAGE,"$PACKAGE")
 AC_DEFINE_UNQUOTED(PACKAGE_VERSION,"$PACKAGE_VERSION")
@@ -28,12 +29,12 @@ AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(PACKAGE_MAIL)
 
 dnl Check the archs, we want the target type.
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 dnl Check our C compiler
-AC_CHECK_TOOL_PREFIX
+
 AC_PROG_CC
-AC_ISC_POSIX
+AC_SEARCH_LIBS([strerror],[cposix])
 
 dnl check for large file support and enable it if possible
 dnl do this early as other stuff might depend on it
@@ -91,7 +92,7 @@ AC_CHECK_LIB(curl, curl_easy_init,
 
 AC_LANG_PUSH([C++])
 AC_CHECK_HEADER(gtest/gtest.h,,
-     AC_MSG_ERROR([failed: I need gtest to build tests]),
+     AC_MSG_WARN([failed: I need gtest (packaged as libgtest-dev) for unit testing]),
 )
 AC_LANG_POP([C++])
 
@@ -172,6 +173,17 @@ AC_EGREP_HEADER(h_errno, netdb.h, [AC_MSG_RESULT(normal)],
        [AC_MSG_ERROR("not found.")])
    ])
 
+
+dnl check for setuid checking function
+AC_CHECK_FUNCS(getresuid getresgid setresuid setresgid)
+AC_SUBST(HAVE_GETRESUID)
+AC_SUBST(HAVE_GETRESGID)
+AC_SUBST(HAVE_SETRESUID)
+AC_SUBST(HAVE_SETRESGID)
+
+AC_CHECK_FUNC(ptsname_r)
+AC_SUBST(HAVE_PTSNAME_R)
+
 dnl Check for doxygen
 AC_PATH_PROG(DOXYGEN, doxygen)
 
@@ -198,4 +210,6 @@ fi
 AC_SUBST(USE_NLS)
 AC_PATH_PROG(BASH, bash)
 
-AC_OUTPUT(environment.mak:buildlib/environment.mak.in makefile:buildlib/makefile.in doc/Doxyfile:doc/Doxyfile.in,make -s dirs)
+AC_CONFIG_FILES([environment.mak:buildlib/environment.mak.in makefile:buildlib/makefile.in doc/Doxyfile:doc/Doxyfile.in])
+AC_CONFIG_COMMANDS([default],[make -s dirs],[])
+AC_OUTPUT

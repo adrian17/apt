@@ -16,8 +16,7 @@ Pin: release unstable
 Pin-Priority: 1
 EOF
 
-insertinstalledpackage 'foo' 'all' '1'
-insertpackage 'testing' 'foo' 'all' '1'
+insertpackage 'testing,installed' 'foo' 'all' '1'
 insertpackage 'testing-updates' 'foo' 'all' '2'
 insertpackage 'unstable' 'foo' 'all' '3'
 
@@ -26,9 +25,9 @@ insertpackage 'testing' 'bar' 'all' '2'
 
 setupaptarchive
 
-testequal "Listing...
+testsuccessequal "Listing...
 bar/testing 2 all [upgradable from: 1]" apt list --upgradable
 
-testequal "Listing...
+testsuccessequal "Listing...
 bar/testing 2 all [upgradable from: 1]
 foo/testing,now 1 all [installed]" apt list
