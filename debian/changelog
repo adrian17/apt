@@ -1,3 +1,10 @@
+apt (1.1~exp15ubuntu2) xenial; urgency=medium
+
+  * merged donkult/debian/experimental:
+    - fix sbuild build failures
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Fri, 20 Nov 2015 10:13:26 +0100
+
 apt (1.1~exp15ubuntu1) xenial; urgency=medium
 
   * merge with debian/experimental
