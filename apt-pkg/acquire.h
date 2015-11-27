@@ -236,8 +236,15 @@ class pkgAcquire
     *
     *  \param WSet The set of file descriptors that are ready for
     *  output.
+    *
+    * \return false if there is an error condition on one of the fds
     */
-   virtual void RunFds(fd_set *RSet,fd_set *WSet);   
+   bool RunFdsSane(fd_set *RSet,fd_set *WSet);
+
+   // just here for compatbility, needs to be removed on the next
+   // ABI/API break. RunFdsSane() is what should be used as it
+   // returns if there is an error condition on one of the fds
+   virtual void RunFds(fd_set *RSet,fd_set *WSet);
 
    /** \brief Check for idle queues with ready-to-fetch items.
     *
@@ -357,7 +364,7 @@ class pkgAcquire
     *  if no lock file should be used. If set also all needed directories
     *  will be created.
     */
-   APT_DEPRECATED bool Setup(pkgAcquireStatus *Progress = NULL, std::string const &Lock = "");
+   APT_DEPRECATED_MSG("Use constructors, .SetLog and .GetLock as needed") bool Setup(pkgAcquireStatus *Progress = NULL, std::string const &Lock = "");
 
    void SetLog(pkgAcquireStatus *Progress) { Log = Progress; }
 

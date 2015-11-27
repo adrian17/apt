@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apt 1.0.5\n"
 "Report-Msgid-Bugs-To: APT Development Team <deity@lists.debian.org>\n"
-"POT-Creation-Date: 2015-10-27 10:30+0100\n"
+"POT-Creation-Date: 2015-11-25 16:01+0100\n"
 "PO-Revision-Date: 2015-08-29 15:24+0200\n"
 "Last-Translator: Miroslav Kure <kurem@debian.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -217,6 +217,7 @@ msgid "Install these packages without verification?"
 msgstr "Instalovat tyto balíky bez ověření?"
 
 #: apt-private/private-download.cc apt-private/private-install.cc
+#, fuzzy
 msgid ""
 "--force-yes is deprecated, use one of the options starting with --allow "
 "instead."
@@ -1093,10 +1094,10 @@ msgid ""
 "       apt-cache [options] show pkg1 [pkg2 ...]\n"
 "\n"
 "apt-cache queries and displays available information about installed\n"
-"as well as installable packages. It works exclusively on the data\n"
-"acquired via the 'update' command of e.g. apt-get to the local cache.\n"
-"The displayed information can therefore be outdated if the last update\n"
-"is too long ago, but in exchange apt-cache works independently of the\n"
+"and installable packages. It works exclusively on the data acquired\n"
+"into the local cache via the 'update' command of e.g. apt-get. The\n"
+"displayed information may therefore be outdated if the last update was\n"
+"too long ago, but in exchange apt-cache works independently of the\n"
 "availability of the configured sources (e.g. offline).\n"
 msgstr ""
 
@@ -1225,12 +1226,16 @@ msgid "Arguments not in pairs"
 msgstr "Argumenty nejsou v párech"
 
 #: cmdline/apt-config.cc
+#, fuzzy
 msgid ""
 "Usage: apt-config [options] command\n"
 "\n"
 "apt-config is an interface to the configuration settings used by\n"
-"all APT tools to be used mainly in debugging and shell scripting.\n"
+"all APT tools, mainly intended for debugging and shell scripting.\n"
 msgstr ""
+"Použití: apt-config [volby] příkaz\n"
+"\n"
+"apt-config je jednoduchý nástroj pro čtení konfiguračního souboru APT\n"
 
 #: cmdline/apt-config.cc
 msgid "get configuration values via shell evaluation"
@@ -1365,7 +1370,7 @@ msgid ""
 "       apt-helper [options] download-file uri target-path\n"
 "\n"
 "apt-helper bundles a variety of commands for shell scripts to use\n"
-"e.g. the same proxy configuration or acquire system as APT would do.\n"
+"e.g. the same proxy configuration or acquire system as APT would.\n"
 msgstr ""
 "Použití: apt-helper [volby] příkaz\n"
 "         apt-helper [volby] download-file uri cílová_cesta\n"
@@ -1444,9 +1449,9 @@ msgid ""
 "Usage: apt-mark [options] {auto|manual} pkg1 [pkg2 ...]\n"
 "\n"
 "apt-mark is a simple command line interface for marking packages\n"
-"as manually or automatically installed. It is also possible to\n"
-"manipulate the dpkg(1) selection states of packages with it.\n"
-"It can also list all packages with or without a certain marking.\n"
+"as manually or automatically installed. It can also be used to\n"
+"manipulate the dpkg(1) selection states of packages, and to list\n"
+"all packages with or without a certain marking.\n"
 msgstr ""
 "Použití: apt-mark [volby] {auto|manual} balík1 [balík2 …]\n"
 "\n"
@@ -1976,7 +1981,8 @@ msgid ""
 "Usage: apt-internal-solver\n"
 "\n"
 "apt-internal-solver is an interface to use the current internal\n"
-"like an external resolver for the APT family for debugging or alike.\n"
+"resolver for the APT family like an external one, for debugging or\n"
+"the like.\n"
 msgstr ""
 "Použití: apt-internal-solver\n"
 "\n"
@@ -1998,7 +2004,7 @@ msgid ""
 "Usage: apt-sortpkgs [options] file1 [file2 ...]\n"
 "\n"
 "apt-sortpkgs is a simple tool to sort package information files.\n"
-"It sorts by default by binary package information, but the -s option\n"
+"By default it sorts by binary package information, but the -s option\n"
 "can be used to switch to source package ordering instead.\n"
 msgstr ""
 
@@ -2188,11 +2194,6 @@ msgstr "V/V operace s podprocesem/souborem selhala"
 msgid "Failed to read while computing MD5"
 msgstr "Chyba čtení při výpočtu MD5"
 
-#: ftparchive/multicompress.cc
-#, c-format
-msgid "Problem unlinking %s"
-msgstr "Problém s odlinkováním %s"
-
 #: ftparchive/multicompress.cc apt-inst/extract.cc
 #, c-format
 msgid "Failed to rename %s to %s"
@@ -2275,11 +2276,6 @@ msgstr "Odlinkování %s [%s]\n"
 #, c-format
 msgid "Failed to readlink %s"
 msgstr "Nelze přečíst link %s"
-
-#: ftparchive/writer.cc
-#, c-format
-msgid "Failed to unlink %s"
-msgstr "Nelze odlinkovat %s"
 
 #: ftparchive/writer.cc
 #, c-format
@@ -2508,13 +2504,13 @@ msgstr "Stahuje se soubor %li z %li"
 
 #: apt-pkg/acquire-item.cc
 msgid ""
-"Updating such a repository securily is impossible and therefore disabled by "
-"default."
+"Updating from such a repository can't be done securely, and is therefore "
+"disabled by default."
 msgstr ""
 
 #: apt-pkg/acquire-item.cc
 msgid ""
-"Data from such a repository can not be authenticated and is therefore "
+"Data from such a repository can't be authenticated and is therefore "
 "potentially dangerous to use."
 msgstr ""
 
@@ -2563,6 +2559,13 @@ msgstr "Chyba GPG: %s: %s"
 #: apt-pkg/acquire-item.cc
 #, c-format
 msgid ""
+"Skipping acquire of configured file '%s' as repository '%s' doesn't support "
+"architecture '%s'"
+msgstr ""
+
+#: apt-pkg/acquire-item.cc
+#, c-format
+msgid ""
 "Unable to find expected entry '%s' in Release file (Wrong sources.list entry "
 "or malformed file)"
 msgstr ""
@@ -2592,7 +2595,7 @@ msgstr "Konfliktní distribuce: %s (očekáváno %s, obdrženo %s)"
 
 #. No Release file was present, or verification failed, so fall
 #. back to queueing Packages files without verification
-#. only allow going further if the users explicitely wants it
+#. only allow going further if the user explicitly wants it
 #: apt-pkg/acquire-item.cc
 #, fuzzy, c-format
 msgid "The repository '%s' is not signed."
@@ -2600,7 +2603,7 @@ msgstr "Repositář „%s“ není podepsán."
 
 #. No Release file was present so fall
 #. back to queueing Packages files without verification
-#. only allow going further if the users explicitely wants it
+#. only allow going further if the user explicitly wants it
 #: apt-pkg/acquire-item.cc
 #, fuzzy, c-format
 msgid "The repository '%s' does not have a Release file."
@@ -2960,6 +2963,11 @@ msgstr "Syntaktická chyba %s:%u: Na konci souboru je zbytečné smetí"
 
 #: apt-pkg/contrib/fileutl.cc
 #, c-format
+msgid "Problem unlinking the file %s"
+msgstr "Problém při odstraňování souboru %s"
+
+#: apt-pkg/contrib/fileutl.cc
+#, c-format
 msgid "Not using locking for read only lock file %s"
 msgstr "Nepoužívá se zamykání pro zámkový soubor %s, který je pouze pro čtení"
 
@@ -3068,11 +3076,6 @@ msgid "Problem renaming the file %s to %s"
 msgstr "Problém při přejmenování souboru %s na %s"
 
 #: apt-pkg/contrib/fileutl.cc
-#, c-format
-msgid "Problem unlinking the file %s"
-msgstr "Problém při odstraňování souboru %s"
-
-#: apt-pkg/contrib/fileutl.cc
 msgid "Problem syncing the file"
 msgstr "Problém při synchronizování souboru"
 
@@ -3082,13 +3085,13 @@ msgstr "Nelze provést mmap prázdného souboru"
 
 #: apt-pkg/contrib/mmap.cc
 #, c-format
-msgid "Couldn't duplicate file descriptor %i"
-msgstr "Nelze duplikovat popisovač souboru %i"
+msgid "Couldn't make mmap of %llu bytes"
+msgstr "Nešlo mmapovat %llu bajtů"
 
 #: apt-pkg/contrib/mmap.cc
 #, c-format
-msgid "Couldn't make mmap of %llu bytes"
-msgstr "Nešlo mmapovat %llu bajtů"
+msgid "Couldn't duplicate file descriptor %i"
+msgstr "Nelze duplikovat popisovač souboru %i"
 
 #: apt-pkg/contrib/mmap.cc
 msgid "Unable to close mmap"
@@ -3223,12 +3226,12 @@ msgstr "Neplatná položka „Valid-Until“ v Release souboru %s"
 #. TRANSLATOR: The first is an option name from sources.list manpage, the other two URI and Suite
 #: apt-pkg/deb/debmetaindex.cc
 #, c-format
-msgid "Conflicting values set for option %s concerning source %s %s"
+msgid "Conflicting values set for option %s regarding source %s %s"
 msgstr "Pro volbu %s byly nastaveny kolidující hodnoty zdroje %s %s"
 
 #: apt-pkg/deb/debmetaindex.cc
 #, c-format
-msgid "Invalid value set for option %s concerning source %s %s (%s)"
+msgid "Invalid value set for option %s regarding source %s %s (%s)"
 msgstr "Pro volbu %s byla nastavena kolidující hodnota zdroje %s %s (%s)"
 
 #: apt-pkg/deb/debrecords.cc apt-pkg/tagfile.cc
@@ -3734,6 +3737,12 @@ msgstr ""
 msgid "Calculating upgrade"
 msgstr "Propočítává se aktualizace"
 
+#~ msgid "Problem unlinking %s"
+#~ msgstr "Problém s odlinkováním %s"
+
+#~ msgid "Failed to unlink %s"
+#~ msgstr "Nelze odlinkovat %s"
+
 #~ msgid ""
 #~ "Usage: apt-cache [options] command\n"
 #~ "       apt-cache [options] show pkg1 [pkg2 ...]\n"
@@ -3802,15 +3811,6 @@ msgstr "Propočítává se aktualizace"
 #~ "  -c=? Načte daný konfigurační soubor\n"
 #~ "  -o=? Nastaví libovolnou volbu, např. -o dir::cache=/tmp\n"
 #~ "Více informací viz manuálové stránky apt-mark(8) a apt.conf(5)."
-
-#~ msgid ""
-#~ "Usage: apt-config [options] command\n"
-#~ "\n"
-#~ "apt-config is a simple tool to read the APT config file\n"
-#~ msgstr ""
-#~ "Použití: apt-config [volby] příkaz\n"
-#~ "\n"
-#~ "apt-config je jednoduchý nástroj pro čtení konfiguračního souboru APT\n"
 
 #~ msgid ""
 #~ "Options:\n"

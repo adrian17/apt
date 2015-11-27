@@ -153,12 +153,12 @@ static bool MessageInsecureRepository(bool const isError, std::string const &msg
    if (isError)
    {
       _error->Error("%s", msg.c_str());
-      _error->Notice("%s", _("Updating such a repository securily is impossible and therefore disabled by default."));
+      _error->Notice("%s", _("Updating from such a repository can't be done securely, and is therefore disabled by default."));
    }
    else
    {
       _error->Warning("%s", msg.c_str());
-      _error->Notice("%s", _("Data from such a repository can not be authenticated and is therefore potentially dangerous to use."));
+      _error->Notice("%s", _("Data from such a repository can't be authenticated and is therefore potentially dangerous to use."));
    }
    _error->Notice("%s", _("See apt-secure(8) manpage for repository creation and user configuration details."));
    return false;
@@ -1391,7 +1391,7 @@ void pkgAcqMetaClearSig::Failed(string const &Message,pkgAcquire::MethodConfig c
 
       // No Release file was present, or verification failed, so fall
       // back to queueing Packages files without verification
-      // only allow going further if the users explicitely wants it
+      // only allow going further if the user explicitly wants it
       if(AllowInsecureRepositories(_("The repository '%s' is not signed."), ClearsignedTarget.Description, TransactionManager->MetaIndexParser, TransactionManager, this) == true)
       {
 	 Status = StatDone;
@@ -1489,7 +1489,7 @@ void pkgAcqMetaIndex::Failed(string const &Message,
 
    // No Release file was present so fall
    // back to queueing Packages files without verification
-   // only allow going further if the users explicitely wants it
+   // only allow going further if the user explicitly wants it
    if(AllowInsecureRepositories(_("The repository '%s' does not have a Release file."), Target.Description, TransactionManager->MetaIndexParser, TransactionManager, this) == true)
    {
       // ensure old Release files are removed
@@ -1640,7 +1640,7 @@ void pkgAcqMetaSig::Failed(string const &Message,pkgAcquire::MethodConfig const 
    // ensures that a Release.gpg file in the lists/ is removed by the transaction
    TransactionManager->TransactionStageRemoval(this, DestFile);
 
-   // only allow going further if the users explicitely wants it
+   // only allow going further if the user explicitly wants it
    if (AllowInsecureRepositories(_("The repository '%s' is not signed."), MetaIndex->Target.Description, TransactionManager->MetaIndexParser, TransactionManager, this) == true)
    {
       if (RealFileExists(FinalReleasegpg) || RealFileExists(FinalInRelease))
@@ -1731,6 +1731,9 @@ pkgAcqDiffIndex::pkgAcqDiffIndex(pkgAcquire * const Owner,
 /* The only header we use is the last-modified header. */
 string pkgAcqDiffIndex::Custom600Headers() const
 {
+   if (TransactionManager->LastMetaIndexParser != NULL)
+      return "\nIndex-File: true";
+
    string const Final = GetFinalFilename();
 
    if(Debug)
@@ -2566,12 +2569,17 @@ void pkgAcqIndex::Init(string const &URI, string const &URIDesc,
 /* The only header we use is the last-modified header. */
 string pkgAcqIndex::Custom600Headers() const
 {
-   string Final = GetFinalFilename();
 
    string msg = "\nIndex-File: true";
-   struct stat Buf;
-   if (stat(Final.c_str(),&Buf) == 0)
-      msg += "\nLast-Modified: " + TimeRFC1123(Buf.st_mtime);
+
+   if (TransactionManager->LastMetaIndexParser == NULL)
+   {
+      std::string const Final = GetFinalFilename();
+
+      struct stat Buf;
+      if (stat(Final.c_str(),&Buf) == 0)
+	 msg += "\nLast-Modified: " + TimeRFC1123(Buf.st_mtime);
+   }
 
    if(Target.IsOptional)
       msg += "\nFail-Ignore: true";

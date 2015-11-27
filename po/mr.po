@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apt 1.0.5\n"
 "Report-Msgid-Bugs-To: APT Development Team <deity@lists.debian.org>\n"
-"POT-Creation-Date: 2015-10-27 10:30+0100\n"
+"POT-Creation-Date: 2015-11-25 16:01+0100\n"
 "PO-Revision-Date: 2008-11-20 23:27+0530\n"
 "Last-Translator: Sampada <sampadanakhare@gmail.com>\n"
 "Language-Team: Marathi, janabhaaratii, C-DAC, Mumbai, India "
@@ -1066,10 +1066,10 @@ msgid ""
 "       apt-cache [options] show pkg1 [pkg2 ...]\n"
 "\n"
 "apt-cache queries and displays available information about installed\n"
-"as well as installable packages. It works exclusively on the data\n"
-"acquired via the 'update' command of e.g. apt-get to the local cache.\n"
-"The displayed information can therefore be outdated if the last update\n"
-"is too long ago, but in exchange apt-cache works independently of the\n"
+"and installable packages. It works exclusively on the data acquired\n"
+"into the local cache via the 'update' command of e.g. apt-get. The\n"
+"displayed information may therefore be outdated if the last update was\n"
+"too long ago, but in exchange apt-cache works independently of the\n"
 "availability of the configured sources (e.g. offline).\n"
 msgstr ""
 
@@ -1206,7 +1206,7 @@ msgid ""
 "Usage: apt-config [options] command\n"
 "\n"
 "apt-config is an interface to the configuration settings used by\n"
-"all APT tools to be used mainly in debugging and shell scripting.\n"
+"all APT tools, mainly intended for debugging and shell scripting.\n"
 msgstr ""
 
 #: cmdline/apt-config.cc
@@ -1341,7 +1341,7 @@ msgid ""
 "       apt-helper [options] download-file uri target-path\n"
 "\n"
 "apt-helper bundles a variety of commands for shell scripts to use\n"
-"e.g. the same proxy configuration or acquire system as APT would do.\n"
+"e.g. the same proxy configuration or acquire system as APT would.\n"
 msgstr ""
 
 #: cmdline/apt-helper.cc
@@ -1415,9 +1415,9 @@ msgid ""
 "Usage: apt-mark [options] {auto|manual} pkg1 [pkg2 ...]\n"
 "\n"
 "apt-mark is a simple command line interface for marking packages\n"
-"as manually or automatically installed. It is also possible to\n"
-"manipulate the dpkg(1) selection states of packages with it.\n"
-"It can also list all packages with or without a certain marking.\n"
+"as manually or automatically installed. It can also be used to\n"
+"manipulate the dpkg(1) selection states of packages, and to list\n"
+"all packages with or without a certain marking.\n"
 msgstr ""
 
 #: cmdline/apt-mark.cc
@@ -1948,7 +1948,8 @@ msgid ""
 "Usage: apt-internal-solver\n"
 "\n"
 "apt-internal-solver is an interface to use the current internal\n"
-"like an external resolver for the APT family for debugging or alike.\n"
+"resolver for the APT family like an external one, for debugging or\n"
+"the like.\n"
 msgstr ""
 "उपयोग : ऍप्ट - एक्स्ट्रॅक्ट टेंप्लेट्स संचिका १[संचिका २..... ]\n"
 " \n"
@@ -1970,7 +1971,7 @@ msgid ""
 "Usage: apt-sortpkgs [options] file1 [file2 ...]\n"
 "\n"
 "apt-sortpkgs is a simple tool to sort package information files.\n"
-"It sorts by default by binary package information, but the -s option\n"
+"By default it sorts by binary package information, but the -s option\n"
 "can be used to switch to source package ordering instead.\n"
 msgstr ""
 
@@ -2163,11 +2164,6 @@ msgstr "IO ची उपक्रिया/संचिका असमर्थ
 msgid "Failed to read while computing MD5"
 msgstr "MD5 कामप्युटींग करतांना वाचण्यासाठी असमर्थ"
 
-#: ftparchive/multicompress.cc
-#, c-format
-msgid "Problem unlinking %s"
-msgstr "%s दुवा मोकळा/सुटा करण्यास अडचण"
-
 #: ftparchive/multicompress.cc apt-inst/extract.cc
 #, c-format
 msgid "Failed to rename %s to %s"
@@ -2250,11 +2246,6 @@ msgstr "%s [%s] डी दुवा\n"
 #, c-format
 msgid "Failed to readlink %s"
 msgstr "%s वाचणारा दुवा असमर्थ"
-
-#: ftparchive/writer.cc
-#, c-format
-msgid "Failed to unlink %s"
-msgstr "%s दुवा काढण्यास असमर्थ"
 
 #: ftparchive/writer.cc
 #, c-format
@@ -2481,13 +2472,13 @@ msgstr "%li ची %li संचिका पुन:प्राप्त कर
 
 #: apt-pkg/acquire-item.cc
 msgid ""
-"Updating such a repository securily is impossible and therefore disabled by "
-"default."
+"Updating from such a repository can't be done securely, and is therefore "
+"disabled by default."
 msgstr ""
 
 #: apt-pkg/acquire-item.cc
 msgid ""
-"Data from such a repository can not be authenticated and is therefore "
+"Data from such a repository can't be authenticated and is therefore "
 "potentially dangerous to use."
 msgstr ""
 
@@ -2536,6 +2527,13 @@ msgstr ""
 #: apt-pkg/acquire-item.cc
 #, c-format
 msgid ""
+"Skipping acquire of configured file '%s' as repository '%s' doesn't support "
+"architecture '%s'"
+msgstr ""
+
+#: apt-pkg/acquire-item.cc
+#, c-format
+msgid ""
 "Unable to find expected entry '%s' in Release file (Wrong sources.list entry "
 "or malformed file)"
 msgstr ""
@@ -2561,7 +2559,7 @@ msgstr ""
 
 #. No Release file was present, or verification failed, so fall
 #. back to queueing Packages files without verification
-#. only allow going further if the users explicitely wants it
+#. only allow going further if the user explicitly wants it
 #: apt-pkg/acquire-item.cc
 #, fuzzy, c-format
 msgid "The repository '%s' is not signed."
@@ -2569,7 +2567,7 @@ msgstr "%s संचिका डायव्हर्ट केली आहे
 
 #. No Release file was present so fall
 #. back to queueing Packages files without verification
-#. only allow going further if the users explicitely wants it
+#. only allow going further if the user explicitly wants it
 #: apt-pkg/acquire-item.cc
 #, fuzzy, c-format
 msgid "The repository '%s' does not have a Release file."
@@ -2917,6 +2915,11 @@ msgid "Syntax error %s:%u: Extra junk at end of file"
 msgstr "नियम रचनेचा दोष %s:%u: फाईलच्या अंती अधिक जंक"
 
 #: apt-pkg/contrib/fileutl.cc
+#, fuzzy, c-format
+msgid "Problem unlinking the file %s"
+msgstr "फाईल अनलिंकिंग करण्यात अडचण"
+
+#: apt-pkg/contrib/fileutl.cc
 #, c-format
 msgid "Not using locking for read only lock file %s"
 msgstr "फक्त वाचण्यासाठी कुलूप संचिका %s साठी कुलूपबंदचा वापर करीत नाही"
@@ -3026,11 +3029,6 @@ msgid "Problem renaming the file %s to %s"
 msgstr "संचिकेची syncing समस्या"
 
 #: apt-pkg/contrib/fileutl.cc
-#, fuzzy, c-format
-msgid "Problem unlinking the file %s"
-msgstr "फाईल अनलिंकिंग करण्यात अडचण"
-
-#: apt-pkg/contrib/fileutl.cc
 msgid "Problem syncing the file"
 msgstr "संचिकेची syncing समस्या"
 
@@ -3040,13 +3038,13 @@ msgstr "रिकामी फाईल mmap करता येणार ना
 
 #: apt-pkg/contrib/mmap.cc
 #, fuzzy, c-format
-msgid "Couldn't duplicate file descriptor %i"
-msgstr "%s साठी पाईप उघडता येत नाही"
+msgid "Couldn't make mmap of %llu bytes"
+msgstr "mmap चे %lu बाईटस् करता येणार नाहीत"
 
 #: apt-pkg/contrib/mmap.cc
 #, fuzzy, c-format
-msgid "Couldn't make mmap of %llu bytes"
-msgstr "mmap चे %lu बाईटस् करता येणार नाहीत"
+msgid "Couldn't duplicate file descriptor %i"
+msgstr "%s साठी पाईप उघडता येत नाही"
 
 #: apt-pkg/contrib/mmap.cc
 #, fuzzy
@@ -3179,12 +3177,12 @@ msgstr "%s डायव्हर्जन फाईलमध्ये अवै�
 #. TRANSLATOR: The first is an option name from sources.list manpage, the other two URI and Suite
 #: apt-pkg/deb/debmetaindex.cc
 #, c-format
-msgid "Conflicting values set for option %s concerning source %s %s"
+msgid "Conflicting values set for option %s regarding source %s %s"
 msgstr ""
 
 #: apt-pkg/deb/debmetaindex.cc
 #, c-format
-msgid "Invalid value set for option %s concerning source %s %s (%s)"
+msgid "Invalid value set for option %s regarding source %s %s (%s)"
 msgstr ""
 
 #: apt-pkg/deb/debrecords.cc apt-pkg/tagfile.cc
@@ -3681,6 +3679,12 @@ msgstr ""
 #: apt-pkg/upgrade.cc
 msgid "Calculating upgrade"
 msgstr "पुढिल आवृत्तीची गणती करीत आहे"
+
+#~ msgid "Problem unlinking %s"
+#~ msgstr "%s दुवा मोकळा/सुटा करण्यास अडचण"
+
+#~ msgid "Failed to unlink %s"
+#~ msgstr "%s दुवा काढण्यास असमर्थ"
 
 #, fuzzy
 #~ msgid ""

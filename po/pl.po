@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apt 0.9.7.3\n"
 "Report-Msgid-Bugs-To: APT Development Team <deity@lists.debian.org>\n"
-"POT-Creation-Date: 2015-10-27 10:30+0100\n"
+"POT-Creation-Date: 2015-11-25 16:01+0100\n"
 "PO-Revision-Date: 2012-07-28 21:53+0200\n"
 "Last-Translator: Michał Kułach <michal.kulach@gmail.com>\n"
 "Language-Team: Polish <debian-l10n-polish@lists.debian.org>\n"
@@ -1130,10 +1130,10 @@ msgid ""
 "       apt-cache [options] show pkg1 [pkg2 ...]\n"
 "\n"
 "apt-cache queries and displays available information about installed\n"
-"as well as installable packages. It works exclusively on the data\n"
-"acquired via the 'update' command of e.g. apt-get to the local cache.\n"
-"The displayed information can therefore be outdated if the last update\n"
-"is too long ago, but in exchange apt-cache works independently of the\n"
+"and installable packages. It works exclusively on the data acquired\n"
+"into the local cache via the 'update' command of e.g. apt-get. The\n"
+"displayed information may therefore be outdated if the last update was\n"
+"too long ago, but in exchange apt-cache works independently of the\n"
 "availability of the configured sources (e.g. offline).\n"
 msgstr ""
 
@@ -1265,12 +1265,16 @@ msgid "Arguments not in pairs"
 msgstr "Argumenty nie są w parach"
 
 #: cmdline/apt-config.cc
+#, fuzzy
 msgid ""
 "Usage: apt-config [options] command\n"
 "\n"
 "apt-config is an interface to the configuration settings used by\n"
-"all APT tools to be used mainly in debugging and shell scripting.\n"
+"all APT tools, mainly intended for debugging and shell scripting.\n"
 msgstr ""
+"Użycie: apt-config [opcje] polecenie\n"
+"\n"
+"apt-config to proste narzędzie do czytania pliku konfiguracyjnego APT\n"
 
 #: cmdline/apt-config.cc
 msgid "get configuration values via shell evaluation"
@@ -1407,7 +1411,7 @@ msgid ""
 "       apt-helper [options] download-file uri target-path\n"
 "\n"
 "apt-helper bundles a variety of commands for shell scripts to use\n"
-"e.g. the same proxy configuration or acquire system as APT would do.\n"
+"e.g. the same proxy configuration or acquire system as APT would.\n"
 msgstr ""
 
 #: cmdline/apt-helper.cc
@@ -1484,9 +1488,9 @@ msgid ""
 "Usage: apt-mark [options] {auto|manual} pkg1 [pkg2 ...]\n"
 "\n"
 "apt-mark is a simple command line interface for marking packages\n"
-"as manually or automatically installed. It is also possible to\n"
-"manipulate the dpkg(1) selection states of packages with it.\n"
-"It can also list all packages with or without a certain marking.\n"
+"as manually or automatically installed. It can also be used to\n"
+"manipulate the dpkg(1) selection states of packages, and to list\n"
+"all packages with or without a certain marking.\n"
 msgstr ""
 "Użycie: apt-mark [opcje] {auto|manual} pakiet1 [pakiet2 ...]\n"
 "\n"
@@ -2025,7 +2029,8 @@ msgid ""
 "Usage: apt-internal-solver\n"
 "\n"
 "apt-internal-solver is an interface to use the current internal\n"
-"like an external resolver for the APT family for debugging or alike.\n"
+"resolver for the APT family like an external one, for debugging or\n"
+"the like.\n"
 msgstr ""
 "Użycie: apt-internal-solver\n"
 "\n"
@@ -2048,7 +2053,7 @@ msgid ""
 "Usage: apt-sortpkgs [options] file1 [file2 ...]\n"
 "\n"
 "apt-sortpkgs is a simple tool to sort package information files.\n"
-"It sorts by default by binary package information, but the -s option\n"
+"By default it sorts by binary package information, but the -s option\n"
 "can be used to switch to source package ordering instead.\n"
 msgstr ""
 
@@ -2242,11 +2247,6 @@ msgstr "Zawiodła operacja IO na pliku/podprocesie"
 msgid "Failed to read while computing MD5"
 msgstr "Nie udało się czytanie w czasie liczenia skrótu MD5"
 
-#: ftparchive/multicompress.cc
-#, c-format
-msgid "Problem unlinking %s"
-msgstr "Problem przy usuwaniu %s"
-
 #: ftparchive/multicompress.cc apt-inst/extract.cc
 #, c-format
 msgid "Failed to rename %s to %s"
@@ -2329,11 +2329,6 @@ msgstr " Odłączenie %s [%s]\n"
 #, c-format
 msgid "Failed to readlink %s"
 msgstr "Nie udało się odczytać dowiązania %s"
-
-#: ftparchive/writer.cc
-#, c-format
-msgid "Failed to unlink %s"
-msgstr "Nie udało się usunąć %s"
 
 #: ftparchive/writer.cc
 #, c-format
@@ -2560,13 +2555,13 @@ msgstr "Pobieranie pliku %li z %li"
 
 #: apt-pkg/acquire-item.cc
 msgid ""
-"Updating such a repository securily is impossible and therefore disabled by "
-"default."
+"Updating from such a repository can't be done securely, and is therefore "
+"disabled by default."
 msgstr ""
 
 #: apt-pkg/acquire-item.cc
 msgid ""
-"Data from such a repository can not be authenticated and is therefore "
+"Data from such a repository can't be authenticated and is therefore "
 "potentially dangerous to use."
 msgstr ""
 
@@ -2617,6 +2612,13 @@ msgstr "Błąd GPG: %s: %s"
 #: apt-pkg/acquire-item.cc
 #, c-format
 msgid ""
+"Skipping acquire of configured file '%s' as repository '%s' doesn't support "
+"architecture '%s'"
+msgstr ""
+
+#: apt-pkg/acquire-item.cc
+#, c-format
+msgid ""
 "Unable to find expected entry '%s' in Release file (Wrong sources.list entry "
 "or malformed file)"
 msgstr ""
@@ -2646,7 +2648,7 @@ msgstr "Nieprawidłowa dystrybucja: %s (oczekiwano %s, a otrzymano %s)"
 
 #. No Release file was present, or verification failed, so fall
 #. back to queueing Packages files without verification
-#. only allow going further if the users explicitely wants it
+#. only allow going further if the user explicitly wants it
 #: apt-pkg/acquire-item.cc
 #, fuzzy, c-format
 msgid "The repository '%s' is not signed."
@@ -2654,7 +2656,7 @@ msgstr "Ominięcie katalogu %s"
 
 #. No Release file was present so fall
 #. back to queueing Packages files without verification
-#. only allow going further if the users explicitely wants it
+#. only allow going further if the user explicitly wants it
 #: apt-pkg/acquire-item.cc
 #, fuzzy, c-format
 msgid "The repository '%s' does not have a Release file."
@@ -3019,6 +3021,11 @@ msgstr "Błąd składniowy %s:%u: Śmieci na końcu pliku"
 
 #: apt-pkg/contrib/fileutl.cc
 #, c-format
+msgid "Problem unlinking the file %s"
+msgstr "Problem przy odlinkowywaniu pliku %s"
+
+#: apt-pkg/contrib/fileutl.cc
+#, c-format
 msgid "Not using locking for read only lock file %s"
 msgstr "Dla pliku blokady %s tylko do odczytu nie zostanie użyta blokada"
 
@@ -3132,11 +3139,6 @@ msgid "Problem renaming the file %s to %s"
 msgstr "Problem przy zapisywaniu pliku %s w %s"
 
 #: apt-pkg/contrib/fileutl.cc
-#, c-format
-msgid "Problem unlinking the file %s"
-msgstr "Problem przy odlinkowywaniu pliku %s"
-
-#: apt-pkg/contrib/fileutl.cc
 msgid "Problem syncing the file"
 msgstr "Problem przy zapisywaniu pliku na dysk"
 
@@ -3146,13 +3148,13 @@ msgstr "Nie można wykonać mmap na pustym pliku"
 
 #: apt-pkg/contrib/mmap.cc
 #, c-format
-msgid "Couldn't duplicate file descriptor %i"
-msgstr "Nie udało się zduplikować deskryptora pliku %i"
+msgid "Couldn't make mmap of %llu bytes"
+msgstr "Nie udało się wykonać mmap %llu bajtów"
 
 #: apt-pkg/contrib/mmap.cc
 #, c-format
-msgid "Couldn't make mmap of %llu bytes"
-msgstr "Nie udało się wykonać mmap %llu bajtów"
+msgid "Couldn't duplicate file descriptor %i"
+msgstr "Nie udało się zduplikować deskryptora pliku %i"
 
 #: apt-pkg/contrib/mmap.cc
 msgid "Unable to close mmap"
@@ -3289,12 +3291,12 @@ msgstr "Nieprawidłowy wpis Valid-Until w pliku Release %s"
 #. TRANSLATOR: The first is an option name from sources.list manpage, the other two URI and Suite
 #: apt-pkg/deb/debmetaindex.cc
 #, c-format
-msgid "Conflicting values set for option %s concerning source %s %s"
+msgid "Conflicting values set for option %s regarding source %s %s"
 msgstr ""
 
 #: apt-pkg/deb/debmetaindex.cc
 #, c-format
-msgid "Invalid value set for option %s concerning source %s %s (%s)"
+msgid "Invalid value set for option %s regarding source %s %s (%s)"
 msgstr ""
 
 #: apt-pkg/deb/debrecords.cc apt-pkg/tagfile.cc
@@ -3810,6 +3812,12 @@ msgstr ""
 msgid "Calculating upgrade"
 msgstr "Obliczanie aktualizacji"
 
+#~ msgid "Problem unlinking %s"
+#~ msgstr "Problem przy usuwaniu %s"
+
+#~ msgid "Failed to unlink %s"
+#~ msgstr "Nie udało się usunąć %s"
+
 #~ msgid ""
 #~ "Usage: apt-cache [options] command\n"
 #~ "       apt-cache [options] show pkg1 [pkg2 ...]\n"
@@ -3870,15 +3878,6 @@ msgstr "Obliczanie aktualizacji"
 #~ "  -o=? Ustawia dowolną opcję konfiguracji, np. -o dir::cache=/tmp\n"
 #~ "Proszę zapoznać się ze stronami podręcznika systemowego apt-mark(8)\n"
 #~ "i apt.conf(5), aby uzyskać więcej informacji."
-
-#~ msgid ""
-#~ "Usage: apt-config [options] command\n"
-#~ "\n"
-#~ "apt-config is a simple tool to read the APT config file\n"
-#~ msgstr ""
-#~ "Użycie: apt-config [opcje] polecenie\n"
-#~ "\n"
-#~ "apt-config to proste narzędzie do czytania pliku konfiguracyjnego APT\n"
 
 #~ msgid ""
 #~ "Options:\n"
