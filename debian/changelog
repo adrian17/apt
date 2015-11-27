@@ -1,11 +1,9 @@
 apt (1.1.1ubuntu1) UNRELEASED; urgency=medium
 
   * merge with debian/experimental
-    - patch for apt cross-building, see http://bugs.debian.org/666772
-    - ubuntu changelog download handling
     - apt-key net-update/apt-xapian-index
     - git-buildpackage config adjustments
-    - ubuntu keyring
+    - workaround gcc-5 compile error: LP: #1473674
 
  -- Michael Vogt <michael.vogt@ubuntu.com>  Fri, 27 Nov 2015 16:42:39 +0100
 
@@ -58,7 +56,6 @@ apt (1.1~exp16) experimental; urgency=medium
   * review of new/changed translatable program strings
 
  -- Michael Vogt <mvo@debian.org>  Tue, 24 Nov 2015 21:29:14 +0100
->>>>>>> master
 
 apt (1.1~exp15) experimental; urgency=medium
 

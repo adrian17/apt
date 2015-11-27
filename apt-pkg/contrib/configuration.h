@@ -33,7 +33,6 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <apt-pkg/macros.h>
 
 #include <apt-pkg/macros.h>
 

@@ -49,12 +49,6 @@ namespace APT {
    }
 }
 
-namespace APT {
-   namespace Progress {
-      class PackageManager;
-      class PackageManagerProgressFd;
-   }
-}
 
 class pkgPackageManager : protected pkgCache::Namespace
 {

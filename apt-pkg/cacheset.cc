@@ -730,6 +730,7 @@ void CacheSetHelper::canNotFindRegEx(PackageContainerInterface * const /*pci*/, 
 	if (ShowError == true)
 		_error->Insert(ErrorType, _("Couldn't find any package by regex '%s'"), pattern.c_str());
 }
+									/*}}}*/
 // canNotFindFnmatch - handle the case no package is found by a fnmatch	/*{{{*/
    void CacheSetHelper::canNotFindFnmatch(PackageContainerInterface * const /*pci*/, pkgCacheFile &/*Cache*/, std::string pattern) {
 	if (ShowError == true)
